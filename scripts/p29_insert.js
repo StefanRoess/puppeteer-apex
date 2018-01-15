@@ -15,10 +15,14 @@ async function start() {
   //await page.addScriptTag({path: './findElementByText.js'});
 
   /* Skalierung */
-  await page.setViewport({width: 1366, height: 768});
+  //await page.setViewport({width: 1366, height: 768});
+  // 4k
+  await page.setViewport({width: 1920, height: 1280});
+
 
   /* Page */
-  await page.goto('https://apex.oracle.com/pls/apex/f?p=121274:LOGIN_DESKTOP::::::', {
+  //await page.goto('https://apex.oracle.com/pls/apex/f?p=121274:LOGIN_DESKTOP::::::', {
+  await page.goto('http://localhost:8080/ords/f?p=102', {
      waituntil: "networkidle2"
   });
 

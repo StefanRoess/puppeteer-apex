@@ -1,10 +1,10 @@
 {
-  "name": "puppeteer",
+  "name": "puppeteer-apex",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "puppeteer": "^0.13.0"
+    "puppeteer": "^1.0.0"
   },
   "devDependencies": {},
   "scripts": {

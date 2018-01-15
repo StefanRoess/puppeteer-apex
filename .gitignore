@@ -2,4 +2,3 @@
 /node_modules
 /to_verify
 /db_objects/packages/test.sql
-package-lock.json

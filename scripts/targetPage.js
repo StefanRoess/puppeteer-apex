@@ -36,4 +36,5 @@ const puppeteer = require('puppeteer');
     await page.waitFor(1000);
 
     await page.click('#click');
+    console.log('end of file');
 })();

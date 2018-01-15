@@ -58,8 +58,8 @@ async function start() {
   await frame.waitForSelector('[data-action="selection-add-row"]') 
   const addRow = await frame.$('[data-action="selection-add-row"]');
   await addRow.click();
-  
-  await setSelectVal('#PRODUCT_ID', 7);
+
+  await setSelectVal('#PRODUCT_ID', 1);
   await page.keyboard.press("Tab", {delay: 1000});
   await setSelectVal('#UNIT_PRICE', 1);
   await page.keyboard.press("Tab", {delay: 1000});

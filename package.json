@@ -1,0 +1,23 @@
+{
+  "name": "puppeteer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "puppeteer": "^0.13.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StefanRoess/puppeteer-apex.git"
+  },
+  "author": "Stefan Roess",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/StefanRoess/puppeteer-apex/issues"
+  },
+  "homepage": "https://github.com/StefanRoess/puppeteer-apex#readme"
+}

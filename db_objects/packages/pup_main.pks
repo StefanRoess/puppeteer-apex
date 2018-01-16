@@ -69,7 +69,7 @@ as
   -----------------------------------
   -- public functions and procedures
   -----------------------------------
-  function get_json_code(
+  function start_json(
       pi_base_url                in varchar2 default null,
       pi_login_yes_no            in number,
       pi_username                in varchar2 default null,

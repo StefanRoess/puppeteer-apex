@@ -3069,7 +3069,7 @@ $if PKG_APEX_VERSION.c_apex_version_5_1 or PKG_APEX_VERSION.c_apex_version_5_1_g
             l_tab_ig_prefixes(1) := pi_tab_ig_prefix_proc_name;
         end if;
 
-        if pi_pk_column is not null and instr(pi_pk_column,':') > 0 
+        if pi_pk_column is not null and instr(pi_pk_column,':') > 0
           then
             l_tab_ig_pk_cols := APEX_UTIL.STRING_TO_TABLE(p_string => pi_pk_column, p_separator => ':');
           else

@@ -34,6 +34,11 @@ as
     region_source_type_code varchar2(255)
   );
 
+  type t_edit_item is record(
+    item_name  varchar2(255),
+    item_id    number
+  );
+
   type t_ig_item is record(
     item_name                 varchar2(255), --rowid
     region_name               varchar2(255),
@@ -57,6 +62,7 @@ as
   ----------------------------
   type t_regions        is table of t_region;
   type t_items          is table of t_item;
+  type t_edit_items     is table of t_edit_item;
   type t_ig_items       is table of t_ig_item;
   type t_tabform_items  is table of t_tabform_item;
 

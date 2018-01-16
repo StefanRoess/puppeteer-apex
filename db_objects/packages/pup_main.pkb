@@ -46,7 +46,7 @@ as
   begin
     select aapi.item_name,
            aapi.display_as_code,
-           case 
+           case
             when upper(aapi.display_as) = 'NUMBER FIELD' then 'NUMBER'
             when upper(aapi.item_data_type) = 'VARCHAR' then 'VARCHAR2'
               else upper(aapi.item_data_type)
@@ -63,7 +63,7 @@ as
     where aapr.application_id = pi_app_id
       and aapr.page_id        = pi_page_id
       and aapr.region_name    = coalesce(pi_region_name,aapr.region_name)
-      and not exists (select 1 
+      and not exists (select 1
                         from apex_application_page_items a 
                         where 1=1
                         and a.item_name = aapi.item_name
@@ -72,6 +72,50 @@ as
 
     return l_return;
   end get_page_items;
+
+  /* ================================================================== */
+  /* == get_forms_region_items ======================================== */
+  /* ================================================================== */
+  function get_forms_region_items(
+    p_app_id      in number,
+    p_page_id     in number,
+    p_region_name in varchar2
+  )
+    return t_edit_items
+  as
+    l_return t_edit_items;
+
+  begin
+    select item_name, item_id
+      bulk collect into l_return
+      from (
+              select pi.item_name, pi.item_id
+                from apex_application_page_items pi
+                join apex_application_page_regions pr on (pi.region_id = pr.region_id)
+                where 1=1
+                and pi.application_id = pr.application_id
+                and pr.application_id = p_app_id
+                and pi.page_id = pr.page_id
+                and pi.page_id = p_page_id
+                and pr.region_name    = coalesce(p_region_name,pr.region_name)
+              minus
+              select pi.item_name, pi.item_id
+                from apex_application_page_items pi
+                join apex_application_page_regions pr on (pi.region_id = pr.region_id)
+                where 1=1
+                and pi.application_id = pr.application_id
+                and pr.application_id = p_app_id
+                and pi.page_id = pr.page_id
+                and pi.page_id = p_page_id
+                and pr.region_name = coalesce(p_region_name,pr.region_name)
+                and ( pi.display_as_code in ('NATIVE_DISPLAY_ONLY','NATIVE_HIDDEN')
+                  or lower(pi.html_form_element_attributes) like '%readonly%'
+                  or pi.read_only_condition_type_code = 'ALWAYS'
+                )
+          );
+
+    return l_return;
+  end get_forms_region_items;
 
   /* ================================================================== */
   /* == get_base_url ================================================== */
@@ -331,9 +375,9 @@ as
                             , pi_page_id      => pi_page_id
                             , pi_region_name  => pi_region_name);
 
-    l_apex_items      := get_apex_items(pi_items               => l_items
-                                      , pi_item_or_type        => c_items
-                                      , pi_load_save_or_delete => pi_load_save_or_delete);
+    l_apex_items := get_apex_items(pi_items               => l_items
+                                 , pi_item_or_type        => c_items
+                                 , pi_load_save_or_delete => pi_load_save_or_delete);
 
     l_apex_item_types := get_apex_items(pi_items               => l_items
                                       , pi_item_or_type        => c_item_types

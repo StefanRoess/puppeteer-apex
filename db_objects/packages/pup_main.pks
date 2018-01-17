@@ -37,6 +37,7 @@ as
   type t_edit_item is record(
     item_id         number,
     item_name       varchar2(300),
+    item_static_id  varchar2(100),
     region_id       number,
     region_name     varchar2(300)
   );

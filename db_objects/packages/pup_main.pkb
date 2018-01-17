@@ -41,7 +41,8 @@ as
      return varchar2
   ---------------------------------------------------------------------------------------
   -- returns all region_id's for a certain page
-    -- History:
+  --
+  -- History:
   --  16-Jan-2018 V1.0   Stefan Roess
   ---------------------------------------------------------------------------------------
   is
@@ -105,6 +106,71 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
+  procedure handle_all_regions(pi_app_id      in number
+                             , pi_page_id     in number
+                             , pi_region_name in varchar2
+                             , pi_dml_flag    in varchar2)
+  as
+    l_vc_arr_region_name  apex_application_global.vc_arr2;
+
+  begin
+    l_vc_arr_region_name := apex_util.string_to_table (ltrim (pi_region_name, ':'));
+
+    for l_i in 1 .. l_vc_arr_region_name.count
+    loop
+      case
+        when pi_dml_flag = 'I' then insert_item_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+        when pi_dml_flag = 'D' then delete_item_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+      end case;
+    end loop;
+  end;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- item_name and item_static_id will be the same for Forms-Item.
+  --
+  -- History:
+  --  16-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  procedure insert_item_values  (pi_app_id      in number
+                               , pi_page_id     in number
+                               , pi_region_name in varchar2)
+  as
+    l_item_type varchar2(10) := 'Forms-Item';
+  begin
+    insert into item_values (item_id, item_name
+                           , item_type, item_static_id
+                           , region_id, region_name
+                           , app_id, page_id)
+      select item_id, item_name
+           , l_item_type, item_name
+           , region_id, region_name
+           , pi_app_id, pi_page_id
+        from table(pup_main.get_edit_items(pi_app_id, pi_page_id, pi_region_name));
+  end;
+
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  procedure delete_item_values  (pi_app_id      in number
+                               , pi_page_id     in number
+                               , pi_region_name in varchar2)
+  as
+    l_item_type varchar2(10) := 'Forms-Item';
+  begin
+    delete from item_values
+      where 1=1
+      and app_id = pi_app_id
+      and page_Id = pi_page_id
+      and region_name = pi_region_name;
+  end;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
   -----------------------------------------------------------------------------
   -- call example:
   -- select * from table(pup_main.get_edit_items(:P20_APP_ID, :P20_PAGE_ID));
@@ -155,61 +221,6 @@ as
     end loop;
 
   end get_edit_items;
-
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  procedure handle_all_regions(pi_app_id      in number
-                             , pi_page_id     in number
-                             , pi_region_name in varchar2
-                             , pi_dml_flag    in varchar2)
-  as
-    l_vc_arr_region_name  apex_application_global.vc_arr2;
-
-  begin
-    l_vc_arr_region_name := apex_util.string_to_table (ltrim (pi_region_name, ':'));
-
-    for l_i in 1 .. l_vc_arr_region_name.count
-    loop
-      case
-        when pi_dml_flag = 'I' then insert_item_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
-        when pi_dml_flag = 'D' then delete_item_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
-      end case;
-    end loop;
-  end;
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  procedure insert_item_values  (pi_app_id      in number
-                               , pi_page_id     in number
-                               , pi_region_name in varchar2)
-  as
-    l_item_type varchar2(10) := 'Forms-Item';
-  begin
-    insert into item_values (item_id, item_name, item_type, region_id, region_name, app_id, page_id)
-      select item_id, item_name, l_item_type, region_id, region_name, pi_app_id, pi_page_id
-        from table(pup_main.get_edit_items(pi_app_id, pi_page_id, pi_region_name));
-  end;
-
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  procedure delete_item_values  (pi_app_id      in number
-                               , pi_page_id     in number
-                               , pi_region_name in varchar2)
-  as
-    l_item_type varchar2(10) := 'Forms-Item';
-  begin
-    delete from item_values
-      where 1=1
-      and app_id = pi_app_id
-      and page_Id = pi_page_id
-      and region_name = pi_region_name;
-  end;
-
 
   /* =================================================================================== */
   /* =================================================================================== */

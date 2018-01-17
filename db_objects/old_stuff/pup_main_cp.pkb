@@ -1,5 +1,108 @@
 create or replace package body pup_main
 as
+  /* ================================================================== */
+  /* ================================================================== */
+  /* ================================================================== */
+  -- $if pup_constants.c_apex_version_5_1 or pup_constants.c_apex_version_5_1_greater
+  -- $then
+  --   function get_ig_apex_call_script(
+  --       pi_app_id               in number,
+  --       pi_page_id              in number,
+  --       pi_load_save_or_delete  in varchar2,
+  --       pi_procedure_name       in varchar2,
+  --       pi_region_name          in varchar2 default null
+  --     )
+  --   return clob
+  --   as
+  --     l_ig_items                    t_ig_items := t_ig_items();
+  --     l_apex_call_parameter_script  clob;
+  --     l_return                      clob;
+  --   begin
+
+  --     l_ig_items := get_ig_items(pi_app_id => pi_app_id, pi_page_id => pi_page_id, pi_region_name => pi_region_name);
+  --     -- l_ig_items := swap_pk_column_on_top(pi_ig_items =>l_ig_items);
+
+  --     -- l_apex_call_parameter_script := get_apex_items(pi_ig_items            => l_ig_items
+  --     --                                                              , pi_load_save_or_delete => pi_load_save_or_delete);
+
+  --     l_return := pup_json_string.replace_procedure_name(pi_source_script => l_return, pi_procedure_name => pi_procedure_name);
+  --     l_return := pup_json_string.replace_func_proc(pi_source_script => l_return, pi_func_proc => l_apex_call_parameter_script);
+
+  --     return l_return;
+  --   end get_ig_apex_call_script;
+  -- $end
+
+
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  function get_region_ids (p_app_id in number, p_page_id in number)
+     return varchar2
+  ---------------------------------------------------------------------------------------
+  -- returns all region_id's for a certain page
+  --
+  -- History:
+  --  16-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  is
+     l_vc_arr_roles   apex_application_global.vc_arr2;
+     l_string         pup_constants.t_big_vc2;
+  begin
+    select region_id
+           bulk collect into l_vc_arr_roles
+      from apex_application_page_regions
+      where 1=1
+      and application_id = p_app_id
+      and page_id = p_page_id
+      order by region_name;
+
+      l_string := apex_util.table_to_string (l_vc_arr_roles, ':');
+      return (l_string);
+   end get_region_ids;
+
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  function get_page_items(
+      pi_app_id       in number,
+      pi_page_id      in number,
+      pi_region_name  in varchar2 default null
+  )
+    return t_items
+  as
+    l_return t_items;
+  begin
+    select aapi.item_name,
+           aapi.display_as_code,
+           case
+            when upper(aapi.display_as)     = 'NUMBER FIELD'  then 'NUMBER'
+            when upper(aapi.item_data_type) = 'VARCHAR'       then 'VARCHAR2'
+              else upper(aapi.item_data_type)
+           end item_data_type,
+           aapi.is_required, -- Yes, No,
+           aapi.item_default,
+           aapr.region_name,
+           aapr.page_id,
+           aapr.source_type_code
+           bulk collect into l_return
+    from APEX_APPLICATION_PAGE_REGIONS aapr
+    join APEX_APPLICATION_PAGE_ITEMS aapi
+      on aapr.region_id       = aapi.region_id
+    where aapr.application_id = pi_app_id
+      and aapr.page_id        = pi_page_id
+      and aapr.region_name    = coalesce(pi_region_name,aapr.region_name)
+      and not exists (select 1
+                        from apex_application_page_items a 
+                        where 1=1
+                        and a.item_name = aapi.item_name
+                        and a.display_as_code in ('NATIVE_HIDDEN', 'NATIVE_DISPLAY_ONLY'))
+    order by aapi.display_sequence, aapr.region_name;
+
+    return l_return;
+  end get_page_items;
+
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
@@ -81,16 +184,10 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
-  ---------------------------------------------------------------------------------------
-  -- Delivers all editable items.
-  -- This means no items like readonly, hidden or NATIVE_DISPLAY_ONLY.
-  --
-  -- History:
-  --  17-Jan-2018 V1.0   Stefan Roess
-  --
+  -----------------------------------------------------------------------------
   -- call example:
   -- select * from table(pup_main.get_edit_items(:P20_APP_ID, :P20_PAGE_ID));
-  ---------------------------------------------------------------------------------------
+  -----------------------------------------------------------------------------
   function get_edit_items(
     pi_app_id      in number,
     pi_page_id     in number,
@@ -99,7 +196,6 @@ as
     return t_edit_items pipelined
   as
     l_return t_edit_item;
-
   begin
     for l_i in (
       select item_name, item_id, region_id, region_name
@@ -110,9 +206,9 @@ as
                 where 1=1
                 and pi.application_id = pr.application_id
                 and pr.application_id = pi_app_id
-                and pi.page_id        = pr.page_id
-                and pi.page_id        = pi_page_id
-                and pr.region_name    = pi_region_name
+                and pi.page_id = pr.page_id
+                and pi.page_id = pi_page_id
+                and pr.region_name = pi_region_name
               minus
               select pi.item_id, pi.item_name, pr.region_id, pr.region_name
                 from apex_application_page_items pi
@@ -120,9 +216,9 @@ as
                 where 1=1
                 and pi.application_id = pr.application_id
                 and pr.application_id = pi_app_id
-                and pi.page_id        = pr.page_id
-                and pi.page_id        = pi_page_id
-                and pr.region_name    = pi_region_name
+                and pi.page_id = pr.page_id
+                and pi.page_id = pi_page_id
+                and pr.region_name = pi_region_name
                 and ( pi.display_as_code in ('NATIVE_DISPLAY_ONLY','NATIVE_HIDDEN')
                   or lower(pi.html_form_element_attributes) like '%readonly%'
                   or pi.read_only_condition_type_code = 'ALWAYS'
@@ -139,16 +235,6 @@ as
 
   end get_edit_items;
 
-
-
-
-
-  /* clean till here */
-
-
-
-
-
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
@@ -158,7 +244,6 @@ as
     return varchar2
   as
     l_return varchar2(100);
-
   begin
     if pi_base_url is not null
       then
@@ -232,75 +317,7 @@ as
     return l_return;
   end add_to_collection;
 
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  function get_region_ids (p_app_id in number, p_page_id in number)
-     return varchar2
-  ---------------------------------------------------------------------------------------
-  -- returns all region_id's for a certain app_id and page_id
-  --
-  -- History:
-  --  16-Jan-2018 V1.0   Stefan Roess
-  ---------------------------------------------------------------------------------------
-  is
-     l_vc_region_ids   apex_application_global.vc_arr2;
-     l_string         pup_constants.t_big_vc2;
 
-  begin
-    select region_id
-           bulk collect into l_vc_region_ids
-      from apex_application_page_regions
-      where 1=1
-      and application_id  = p_app_id
-      and page_id         = p_page_id
-      order by region_name;
-
-      l_string := apex_util.table_to_string (l_vc_region_ids, ':');
-      return (l_string);
-  end get_region_ids;
-
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  function get_page_items(
-      pi_app_id       in number,
-      pi_page_id      in number,
-      pi_region_name  in varchar2 default null
-  )
-    return t_items
-  as
-    l_return t_items;
-  begin
-    select aapi.item_name,
-           aapi.display_as_code,
-           case
-            when upper(aapi.display_as)     = 'NUMBER FIELD'  then 'NUMBER'
-            when upper(aapi.item_data_type) = 'VARCHAR'       then 'VARCHAR2'
-              else upper(aapi.item_data_type)
-           end item_data_type,
-           aapi.is_required, -- Yes, No,
-           aapi.item_default,
-           aapr.region_name,
-           aapr.page_id,
-           aapr.source_type_code
-           bulk collect into l_return
-    from APEX_APPLICATION_PAGE_REGIONS aapr
-    join APEX_APPLICATION_PAGE_ITEMS aapi
-      on aapr.region_id       = aapi.region_id
-    where aapr.application_id = pi_app_id
-      and aapr.page_id        = pi_page_id
-      and aapr.region_name    = coalesce(pi_region_name,aapr.region_name)
-      and not exists (select 1
-                        from apex_application_page_items a 
-                        where 1=1
-                        and a.item_name = aapi.item_name
-                        and a.display_as_code in ('NATIVE_HIDDEN', 'NATIVE_DISPLAY_ONLY'))
-    order by aapi.display_sequence, aapr.region_name;
-
-    return l_return;
-  end get_page_items;
 
   /* =================================================================================== */
   /* =================================================================================== */
@@ -546,7 +563,6 @@ as
     return clob
   as
     l_return clob;
-
   begin
     case pi_is_tab_or_ig
       when 0
@@ -569,15 +585,39 @@ as
                             pi_is_tab_or_ig            => 1,
                             pi_load_save_or_delete     => 'S'
           );
+
+          -- $if pup_constants.c_apex_version_5_1 or pup_constants.c_apex_version_5_1_greater
+          --   $then
+          --       when 1
+          --         then
+          --           l_return := get_ig_apex_call_script(pi_app_id              => pi_app_id,
+          --                                               pi_page_id             => pi_page_id,
+          --                                               pi_load_save_or_delete => 'S',
+          --                                               pi_procedure_name      => pi_tab_ig_prefix_proc_name || c_save_proc_name,
+          --                                               pi_region_name         => pi_region_name
+          --                                               );
+          -- $end
       else
         null;
     end case;
     return l_return;
   end get_save_proc_for_apex_proc;
 
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+
+
+
+  /* ================================================================== */
+  /* === in Apex used Functions ======================================= */
+  /* ================================================================== */
+
+
   /* ================================================================== */
   /* == call from dynamic action "on Change set P10_PAGE_ID" ========== */
-  /* ================================================================== */
+  /* ================================================================== */  
   function modal_page_yes_no(
       pi_app_id   in number,
       pi_page_id  in number
@@ -585,20 +625,20 @@ as
     return number
   as
     l_return number;
-
   begin
     $IF pup_constants.c_apex_version_5_1 or pup_constants.c_apex_version_5_1_greater
     $THEN
-      select count(*)
-        into l_return
-        from apex_application_pages
-        where application_id = pi_app_id
+      select count(*) 
+        into l_return 
+        from apex_application_pages 
+        where application_id = pi_app_id 
         and page_id = pi_page_id
         and upper(page_mode) ='MODAL DIALOG';
     $END
 
     return l_return;
-  end;
+  end; 
+
 
   /* =================================================================================== */
   /* =================================================================================== */
@@ -631,13 +671,6 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
-  ---------------------------------------------------------------------------------------
-  -- This function will be called by Apex, with Click at the Button Create JSON
-  -- a dynamic Action "get JSON Code" will be fired.
-  --
-  -- History:
-  --  16-Jan-2018 V1.0   Stefan Roess
-  ---------------------------------------------------------------------------------------
   function start_json (
       pi_base_url                in varchar2,
       pi_login_yes_no            in number,
@@ -656,6 +689,13 @@ as
       pi_tab_ig_prefix_proc_name in varchar2 default null --for the future to set it from outside
   )
     return clob
+  ---------------------------------------------------------------------------------------
+  -- This function will be called by Apex, with Click at the Button Create JSON
+  -- a dynamic Action "get JSON Code" will be fired.
+  --
+  -- History:
+  --  16-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
   as
     l_regions         t_regions;
     l_ig_regions      t_regions;
@@ -761,8 +801,24 @@ as
                                                    pi_is_tab_or_ig            => 1,
                                                    pi_tab_ig_prefix_proc_name => l_tab_ig_prefix_proc_name);
 
+            -- l_update :=  get_update_proc_for_apex_proc(pi_app_id                  => pi_app_id,
+            --                                            pi_page_id                 => pi_page_id,
+            --                                            pi_region_name             => l_ig_regions(i).region_name,
+            --                                            pi_is_tab_or_ig            => 1,
+            --                                            pi_tab_ig_prefix_proc_name => l_tab_ig_prefix_proc_name);
+
+            -- l_delete :=  get_del_proc_for_apex_proc(pi_app_id                   => pi_app_id,
+            --                                         pi_page_id                  => pi_page_id,
+            --                                         pi_region_name              => l_ig_regions(i).region_name,
+            --                                         pi_is_tab_or_ig             => 1,
+            --                                         pi_tab_ig_prefix_proc_name  => l_tab_ig_prefix_proc_name);
+
             l_ig_tab_call_process := pup_json_string.c_json_string;
+
             l_ig_tab_call_process := pup_json_string.replace_ig_tab_save_call(pi_source_script => l_ig_tab_call_process, pi_save_script => l_save);
+           -- l_ig_tab_call_process := pup_json_string.replace_ig_tab_update_call(pi_source_script => l_ig_tab_call_process, pi_update_script => l_update);
+           -- l_ig_tab_call_process := pup_json_string.replace_ig_tab_delete_call(pi_source_script => l_ig_tab_call_process, pi_delete_script => l_delete);
+
             l_return := l_return || l_ig_tab_call_process;
 
           end loop;

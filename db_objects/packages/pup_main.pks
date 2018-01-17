@@ -37,6 +37,9 @@ as
   type t_edit_item is record(
     item_id         number,
     item_name       varchar2(300),
+    item_data_type  varchar2(200),
+    is_required     varchar2(100),
+    item_default    varchar2(300),
     item_static_id  varchar2(100),
     region_id       number,
     region_name     varchar2(300)

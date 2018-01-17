@@ -43,14 +43,27 @@ as
                                , pi_region_name in varchar2)
   as
     l_item_type varchar2(10) := 'Forms-Item';
+
   begin
-    insert into item_values (item_id, item_name
-                           , item_type, item_static_id
-                           , region_id, region_name
+    insert into item_values (item_id
+                           , item_name
+                           , item_type
+                           , item_data_type
+                           , is_required
+                           , item_default
+                           , item_static_id
+                           , region_id
+                           , region_name
                            , app_id, page_id)
-      select item_id, item_name
-           , l_item_type, item_name
-           , region_id, region_name
+      select item_id
+           , item_name
+           , l_item_type
+           , item_data_type
+           , is_required
+           , item_default
+           , item_name
+           , region_id
+           , region_name
            , pi_app_id, pi_page_id
         from table(pup_main.get_edit_items(pi_app_id, pi_page_id, pi_region_name));
   end;
@@ -102,9 +115,19 @@ as
 
   begin
     for l_i in (
-      select item_name, item_id, region_id, region_name
+      select item_id, item_name, item_data_type, is_required, item_default, region_id, region_name
         from (
-              select pi.item_id, pi.item_name, pr.region_id, pr.region_name
+              select  pi.item_id,
+                      pi.item_name,
+                      case
+                        when upper(pi.display_as)     = 'NUMBER FIELD'  then 'NUMBER'
+                        when upper(pi.item_data_type) = 'VARCHAR'       then 'VARCHAR2'
+                        else upper(pi.item_data_type)
+                      end item_data_type,
+                      pi.is_required, -- Yes, No,
+                      pi.item_default,
+                      pr.region_id,
+                      pr.region_name
                 from apex_application_page_items pi
                 join apex_application_page_regions pr on (pi.region_id = pr.region_id)
                 where 1=1
@@ -114,7 +137,17 @@ as
                 and pi.page_id        = pi_page_id
                 and pr.region_name    = pi_region_name
               minus
-              select pi.item_id, pi.item_name, pr.region_id, pr.region_name
+              select  pi.item_id,
+                      pi.item_name,
+                      case
+                        when upper(pi.display_as)     = 'NUMBER FIELD'  then 'NUMBER'
+                        when upper(pi.item_data_type) = 'VARCHAR'       then 'VARCHAR2'
+                        else upper(pi.item_data_type)
+                      end item_data_type,
+                      pi.is_required, -- Yes, No,
+                      pi.item_default,
+                      pr.region_id,
+                      pr.region_name
                 from apex_application_page_items pi
                 join apex_application_page_regions pr on (pi.region_id = pr.region_id)
                 where 1=1
@@ -130,17 +163,17 @@ as
               )
     )
     loop
-      l_return.item_id      := l_i.item_id;
-      l_return.item_name    := l_i.item_name;
-      l_return.region_id    := l_i.region_id;
-      l_return.region_name  := l_i.region_name;
+      l_return.item_id        := l_i.item_id;
+      l_return.item_name      := l_i.item_name;
+      l_return.item_data_type := l_i.item_data_type;
+      l_return.is_required    := l_i.is_required;
+      l_return.item_default   := l_i.item_default;
+      l_return.region_id      := l_i.region_id;
+      l_return.region_name    := l_i.region_name;
       pipe row(l_return);
     end loop;
 
   end get_edit_items;
-
-
-
 
 
   /* clean till here */
@@ -272,6 +305,7 @@ as
     return t_items
   as
     l_return t_items;
+
   begin
     select aapi.item_name,
            aapi.display_as_code,
@@ -313,6 +347,7 @@ as
     return t_regions
   as
     l_return t_regions;
+
   begin
     $IF pup_constants.c_apex_version_5_1 or pup_constants.c_apex_version_5_1_greater
     $THEN
@@ -353,6 +388,7 @@ as
   as
     l_extend_count  number    := 0;
     l_return        t_regions := t_regions();
+
   begin
     for i in 1..pi_regions.count
     loop
@@ -379,6 +415,7 @@ as
     return varchar2
   as
     l_return pup_constants.t_max_vc2;
+
   begin
     case pi_item_or_type
       when c_items then
@@ -429,6 +466,7 @@ as
     return clob
   as
     l_return clob;
+
   begin
     case when pi_items is not null and pi_items.count > 0 then
       case pi_load_save_or_delete

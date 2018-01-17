@@ -5,10 +5,13 @@ create table item_values (
   , item_id         number
   , item_name       varchar2 (200 char) not null
   , item_value      varchar2 (200 char)
+  , item_data_type  varchar2 (200 char)
+  , item_default    varchar2 (300 char)
   , item_type       varchar2  (50 char) -- from forms_item or interactive grid column
   , item_static_id  varchar2 (100 char)
+  , is_required     varchar2 (100 char)
   , region_id       number
-  , region_name     varchar2 (500 char)
+  , region_name     varchar2 (300 char)
   , app_id          number
   , page_id         number
   , constraint      item_values_pk primary key ( id ) enable

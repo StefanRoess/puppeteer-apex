@@ -16,17 +16,66 @@ as
                              , pi_dml_flag    in varchar2)
   as
     l_vc_arr_region_name  apex_application_global.vc_arr2;
+    l_ig                  number;
 
   begin
     l_vc_arr_region_name := apex_util.string_to_table (ltrim (pi_region_name, ':'));
 
     for l_i in 1 .. l_vc_arr_region_name.count
     loop
-      case
-        when pi_dml_flag = 'I' then insert_item_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
-        when pi_dml_flag = 'D' then delete_item_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
-      end case;
+      ---------------------------------------
+      -- is this region an Interactive Grid?
+      -- l_ig = 1
+      ---------------------------------------
+      l_ig := pup_main.is_native_ig (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+
+      if l_ig = 0 and pi_dml_flag = 'I' then
+        insert_item_values    (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+      elsif l_ig = 1 and pi_dml_flag = 'I' then
+        insert_item_ig_values (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+      end if;
+
+      if pi_dml_flag = 'D' then
+        delete_item_values (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+      end if;
+
     end loop;
+  end;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- is this certain region on a certain app_id and page_id an interactive report?
+  --
+  -- History:
+  --  17-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  function is_native_ig(
+    pi_app_id      in number,
+    pi_page_id     in number,
+    pi_region_name in varchar2
+  )
+    return number
+  as
+    l_return number;
+
+  begin
+    select 1
+      into l_return
+      from apex_application_page_regions
+      where 1=1
+      and application_id    = pi_app_id
+      and page_id           = pi_page_id
+      and region_name       = pi_region_name
+      and source_type_code  = 'NATIVE_IG';
+
+    return l_return;
+
+  exception
+    when no_data_found then
+      l_return := 0;
+      return l_return;
   end;
 
   /* =================================================================================== */
@@ -61,7 +110,7 @@ as
            , item_data_type
            , is_required
            , item_default
-           , item_name
+           , item_static_id
            , region_id
            , region_name
            , pi_app_id, pi_page_id
@@ -82,7 +131,6 @@ as
                                , pi_page_id     in number
                                , pi_region_name in varchar2)
   as
-    l_item_type varchar2(10) := 'Forms-Item';
   begin
     delete from item_values
       where 1=1
@@ -90,6 +138,7 @@ as
       and page_Id = pi_page_id
       and region_name = pi_region_name;
   end;
+
 
   /* =================================================================================== */
   /* =================================================================================== */
@@ -102,7 +151,10 @@ as
   --  17-Jan-2018 V1.0   Stefan Roess
   --
   -- call example:
-  -- select * from table(pup_main.get_edit_items(:P20_APP_ID, :P20_PAGE_ID));
+ -- select *
+  --   from table(
+  --           pup_main.get_edit_items(:P20_APP_ID, :P20_PAGE_ID, :P20_REGION_NAME)
+  --         );
   ---------------------------------------------------------------------------------------
   function get_edit_items(
     pi_app_id      in number,
@@ -115,7 +167,8 @@ as
 
   begin
     for l_i in (
-      select item_id, item_name, item_data_type, is_required, item_default, region_id, region_name
+      select item_id, item_name, item_data_type, is_required
+           , item_default, item_static_id, region_id, region_name
         from (
               select  pi.item_id,
                       pi.item_name,
@@ -126,6 +179,7 @@ as
                       end item_data_type,
                       pi.is_required, -- Yes, No,
                       pi.item_default,
+                      pi.item_name item_static_id,
                       pr.region_id,
                       pr.region_name
                 from apex_application_page_items pi
@@ -146,6 +200,7 @@ as
                       end item_data_type,
                       pi.is_required, -- Yes, No,
                       pi.item_default,
+                      pi.item_name item_static_id,
                       pr.region_id,
                       pr.region_name
                 from apex_application_page_items pi
@@ -168,12 +223,134 @@ as
       l_return.item_data_type := l_i.item_data_type;
       l_return.is_required    := l_i.is_required;
       l_return.item_default   := l_i.item_default;
+      l_return.item_static_id := l_i.item_static_id;
       l_return.region_id      := l_i.region_id;
       l_return.region_name    := l_i.region_name;
       pipe row(l_return);
     end loop;
 
   end get_edit_items;
+
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- item_name and item_static_id will be the same for Forms-Item.
+  --
+  -- History:
+  --  17-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  procedure insert_item_ig_values  (pi_app_id      in number
+                                  , pi_page_id     in number
+                                  , pi_region_name in varchar2)
+  as
+    l_item_type varchar2(20) := 'IG-Column-Item';
+
+  begin
+    insert into item_values (item_id
+                           , item_name
+                           , item_type
+                           , item_data_type
+                           , is_required
+                           , item_default
+                           , item_static_id
+                           , region_id
+                           , region_name
+                           , app_id, page_id)
+      select item_id
+           , item_name
+           , l_item_type
+           , item_data_type
+           , is_required
+           , item_default
+           , item_static_id
+           , region_id
+           , region_name
+           , pi_app_id, pi_page_id
+        from table(pup_main.get_edit_ig_items(pi_app_id, pi_page_id, pi_region_name));
+  end;
+
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- Delivers all editable interactive grid items.
+  -- This means no items like readonly, hidden or NATIVE_DISPLAY_ONLY.
+  --
+  -- History:
+  --  17-Jan-2018 V1.0   Stefan Roess
+  --
+  -- call example:
+  -- select *
+  --   from table(
+  --           pup_main.get_edit_ig_items(:P20_APP_ID, :P20_PAGE_ID, :P20_REGION_NAME)
+  --         );
+  ---------------------------------------------------------------------------------------
+  function get_edit_ig_items(
+    pi_app_id      in number,
+    pi_page_id     in number,
+    pi_region_name in varchar2
+  )
+    return t_edit_ig_items pipelined
+  as
+    l_return t_edit_ig_item;
+
+  begin
+    for l_i in (
+      select column_id item_id
+           , name item_name
+           , data_type item_data_type
+           , is_required
+           , item_default
+           , static_id item_static_id
+           , region_id
+           , region_name
+        from (
+              select ic.column_id,
+                     ic.name,
+                     ic.data_type,
+                     ic.is_required,
+                     null item_default,
+                     ic.static_id,
+                     ic.region_id,
+                     ic.region_name
+                from apex_appl_page_ig_columns ic
+                where 1=1
+                and ic.application_id = pi_app_id
+                and ic.page_id        = pi_page_id
+                and ic.region_name    = pi_region_name
+              minus
+              select  ic.column_id,
+                     ic.name,
+                     ic.data_type,
+                     ic.is_required,
+                     null item_default,
+                     ic.static_id,
+                     ic.region_id,
+                     ic.region_name
+                from apex_appl_page_ig_columns ic
+                where 1=1
+                and ic.application_id = pi_app_id
+                and ic.page_id        = pi_page_id
+                and ic.region_name    = pi_region_name
+                and ic.item_type in ('NATIVE_HIDDEN', 'NATIVE_DISPLAY_ONLY', 'NATIVE_ROW_ACTION', 'NATIVE_ROW_SELECTOR')
+              )
+    )
+    loop
+      l_return.item_id        := l_i.item_id;
+      l_return.item_name      := l_i.item_name;
+      l_return.item_data_type := l_i.item_data_type;
+      l_return.is_required    := l_i.is_required;
+      l_return.item_default   := l_i.item_default;
+      l_return.item_static_id := l_i.item_static_id;
+      l_return.region_id      := l_i.region_id;
+      l_return.region_name    := l_i.region_name;
+      pipe row(l_return);
+    end loop;
+
+  end get_edit_ig_items;
 
 
   /* clean till here */

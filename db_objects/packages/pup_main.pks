@@ -45,6 +45,17 @@ as
     region_name     varchar2(300)
   );
 
+  type t_edit_ig_item is record(
+    item_id         number,
+    item_name       varchar2(300),
+    item_data_type  varchar2(200),
+    is_required     varchar2(100),
+    item_default    varchar2(300),
+    item_static_id  varchar2(100),
+    region_id       number,
+    region_name     varchar2(300)
+  );
+
   type t_ig_item is record(
     item_name                 varchar2(255), --rowid
     region_name               varchar2(255),
@@ -69,6 +80,7 @@ as
   type t_regions        is table of t_region;
   type t_items          is table of t_item;
   type t_edit_items     is table of t_edit_item;
+  type t_edit_ig_items  is table of t_edit_ig_item;
   type t_ig_items       is table of t_ig_item;
   type t_tabform_items  is table of t_tabform_item;
 
@@ -82,16 +94,32 @@ as
   )
     return t_edit_items pipelined;
 
-
+  function get_edit_ig_items(
+    pi_app_id      in number,
+    pi_page_id     in number,
+    pi_region_name in varchar2
+  )
+    return t_edit_ig_items pipelined;
 
   procedure handle_all_regions(pi_app_id      in number
                              , pi_page_id     in number
                              , pi_region_name in varchar2
                              , pi_dml_flag    in varchar2);
 
+  function is_native_ig(
+    pi_app_id      in number,
+    pi_page_id     in number,
+    pi_region_name in varchar2
+  )
+    return number;
+
   procedure insert_item_values  (pi_app_id      in number
                                , pi_page_id     in number
                                , pi_region_name in varchar2);
+
+  procedure insert_item_ig_values  (pi_app_id      in number
+                                  , pi_page_id     in number
+                                  , pi_region_name in varchar2);
 
   procedure delete_item_values  (pi_app_id      in number
                                , pi_page_id     in number

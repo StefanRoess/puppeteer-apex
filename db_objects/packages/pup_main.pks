@@ -35,8 +35,10 @@ as
   );
 
   type t_edit_item is record(
-    item_name  varchar2(255),
-    item_id    number
+    item_id         number,
+    item_name       varchar2(300),
+    region_id       number,
+    region_name     varchar2(300)
   );
 
   type t_ig_item is record(
@@ -69,6 +71,28 @@ as
   -----------------------------------
   -- public functions and procedures
   -----------------------------------
+  function get_edit_items(
+    pi_app_id      in number,
+    pi_page_id     in number,
+    pi_region_name in varchar2
+  )
+    return t_edit_items pipelined;
+
+
+
+  procedure handle_all_regions(pi_app_id      in number
+                             , pi_page_id     in number
+                             , pi_region_name in varchar2
+                             , pi_dml_flag    in varchar2);
+
+  procedure insert_item_values  (pi_app_id      in number
+                               , pi_page_id     in number
+                               , pi_region_name in varchar2);
+
+  procedure delete_item_values  (pi_app_id      in number
+                               , pi_page_id     in number
+                               , pi_region_name in varchar2);
+
   function start_json(
       pi_base_url                in varchar2 default null,
       pi_login_yes_no            in number,

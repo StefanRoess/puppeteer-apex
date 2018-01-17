@@ -105,47 +105,111 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
-  function get_forms_region_items(
-    p_app_id      in number,
-    p_page_id     in number,
-    p_region_name in varchar2
+  -----------------------------------------------------------------------------
+  -- call example:
+  -- select * from table(pup_main.get_edit_items(:P20_APP_ID, :P20_PAGE_ID));
+  -----------------------------------------------------------------------------
+  function get_edit_items(
+    pi_app_id      in number,
+    pi_page_id     in number,
+    pi_region_name in varchar2
   )
-    return t_edit_items
+    return t_edit_items pipelined
   as
-    l_return t_edit_items;
-
+    l_return t_edit_item;
   begin
-    select item_name, item_id
-      bulk collect into l_return
-      from (
-              select pi.item_name, pi.item_id
+    for l_i in (
+      select item_name, item_id, region_id, region_name
+        from (
+              select pi.item_id, pi.item_name, pr.region_id, pr.region_name
                 from apex_application_page_items pi
                 join apex_application_page_regions pr on (pi.region_id = pr.region_id)
                 where 1=1
                 and pi.application_id = pr.application_id
-                and pr.application_id = p_app_id
+                and pr.application_id = pi_app_id
                 and pi.page_id = pr.page_id
-                and pi.page_id = p_page_id
-                and pr.region_name    = coalesce(p_region_name,pr.region_name)
+                and pi.page_id = pi_page_id
+                and pr.region_name = pi_region_name
               minus
-              select pi.item_name, pi.item_id
+              select pi.item_id, pi.item_name, pr.region_id, pr.region_name
                 from apex_application_page_items pi
                 join apex_application_page_regions pr on (pi.region_id = pr.region_id)
                 where 1=1
                 and pi.application_id = pr.application_id
-                and pr.application_id = p_app_id
+                and pr.application_id = pi_app_id
                 and pi.page_id = pr.page_id
-                and pi.page_id = p_page_id
-                and pr.region_name = coalesce(p_region_name,pr.region_name)
+                and pi.page_id = pi_page_id
+                and pr.region_name = pi_region_name
                 and ( pi.display_as_code in ('NATIVE_DISPLAY_ONLY','NATIVE_HIDDEN')
                   or lower(pi.html_form_element_attributes) like '%readonly%'
                   or pi.read_only_condition_type_code = 'ALWAYS'
                 )
-          );
+              )
+    )
+    loop
+      l_return.item_id      := l_i.item_id;
+      l_return.item_name    := l_i.item_name;
+      l_return.region_id    := l_i.region_id;
+      l_return.region_name  := l_i.region_name;
+      pipe row(l_return);
+    end loop;
 
-    return l_return;
+  end get_edit_items;
 
-  end get_forms_region_items;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  procedure handle_all_regions(pi_app_id      in number
+                             , pi_page_id     in number
+                             , pi_region_name in varchar2
+                             , pi_dml_flag    in varchar2)
+  as
+    l_vc_arr_region_name  apex_application_global.vc_arr2;
+
+  begin
+    l_vc_arr_region_name := apex_util.string_to_table (ltrim (pi_region_name, ':'));
+
+    for l_i in 1 .. l_vc_arr_region_name.count
+    loop
+      case
+        when pi_dml_flag = 'I' then insert_item_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+        when pi_dml_flag = 'D' then delete_item_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+      end case;
+    end loop;
+  end;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  procedure insert_item_values  (pi_app_id      in number
+                               , pi_page_id     in number
+                               , pi_region_name in varchar2)
+  as
+    l_item_type varchar2(10) := 'Forms-Item';
+  begin
+    insert into item_values (item_id, item_name, item_type, region_id, region_name, app_id, page_id)
+      select item_id, item_name, l_item_type, region_id, region_name, pi_app_id, pi_page_id
+        from table(pup_main.get_edit_items(pi_app_id, pi_page_id, pi_region_name));
+  end;
+
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  procedure delete_item_values  (pi_app_id      in number
+                               , pi_page_id     in number
+                               , pi_region_name in varchar2)
+  as
+    l_item_type varchar2(10) := 'Forms-Item';
+  begin
+    delete from item_values
+      where 1=1
+      and app_id = pi_app_id
+      and page_Id = pi_page_id
+      and region_name = pi_region_name;
+  end;
+
 
   /* =================================================================================== */
   /* =================================================================================== */

@@ -94,6 +94,15 @@ as
   end replace_item_types;
 
   /* ================================================================== */
+  function replace_item_values( pi_source_script in clob
+                              , pi_items         in clob )
+    return clob
+  as
+  begin
+    return replace(pi_source_script, '#PAGE_ITEM_VALUES#', pi_items);
+  end replace_item_values;
+
+  /* ================================================================== */
   function replace_screenshot( pi_source_script    in clob
                              , pi_screenshot       in number )
     return clob

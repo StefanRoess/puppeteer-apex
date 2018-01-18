@@ -425,17 +425,6 @@ as
     end loop;
   end;
 
-
-
-
-
-
-  /* clean till here */
-
-
-
-
-
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
@@ -455,34 +444,6 @@ as
     end if;
     return l_return;
   end get_base_url;
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  function get_region_ids (p_app_id in number, p_page_id in number)
-     return varchar2
-  ---------------------------------------------------------------------------------------
-  -- returns all region_id's for a certain app_id and page_id
-  --
-  -- History:
-  --  16-Jan-2018 V1.0   Stefan Roess
-  ---------------------------------------------------------------------------------------
-  is
-     l_vc_region_ids   apex_application_global.vc_arr2;
-     l_string         pup_constants.t_big_vc2;
-
-  begin
-    select region_id
-           bulk collect into l_vc_region_ids
-      from apex_application_page_regions
-      where 1=1
-      and application_id  = p_app_id
-      and page_id         = p_page_id
-      order by region_name;
-
-      l_string := apex_util.table_to_string (l_vc_region_ids, ':');
-      return (l_string);
-  end get_region_ids;
 
   /* =================================================================================== */
   /* =================================================================================== */
@@ -527,88 +488,101 @@ as
 
   end;
 
-
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
-  function get_apex_call_pio_parameter(pi_item          in t_item_value default null,
-                                       pi_ig_item       in t_ig_item default null,
-                                       pi_tabform_item  in t_tabform_item default null,
-                                       pi_item_or_type  in varchar2
-                                      )
+  ---------------------------------------------------------------------------------------
+  -- distinguish between item_name, data_type and item_value
+  --
+  -- History:
+  --  18-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  function get_diff_types(pi_item            in t_item_value default null,
+                          pi_item_type_value in varchar2)
     return varchar2
   as
     l_return pup_constants.t_max_vc2;
 
   begin
-    case pi_item_or_type
+    case pi_item_type_value
+      ----------
+      -- items
+      ----------
       when c_items then
-        ----------
-        -- items
-        ----------
-        case 
-          when pi_item.item_name is not null
-            then l_return := pi_item.item_name;
-          when pi_ig_item.item_name is not null
-            then l_return := '      ' || pi_ig_item.item_name;
-          when pi_tabform_item.item_name is not null
-            then l_return := '      ' || pi_tabform_item.item_name;
+        case
+          when pi_item.item_name is not null then l_return := c_quot||pi_item.item_name||c_quot;
         else
           null;
         end case;
 
-     when c_item_types then
-        ------------------
-        -- item_data_type
-        ------------------
-        case 
-          when pi_item.item_data_type is not null
-            then l_return := pi_item.item_data_type;
-          when pi_ig_item.item_data_type is not null
-            then l_return := '      ' || pi_ig_item.item_data_type;
+      ------------------
+      -- item_data_type
+      ------------------
+      when c_item_types then
+        case
+          when pi_item.item_data_type is not null then l_return := c_quot||pi_item.item_data_type||c_quot;
         else
           null;
         end case;
-   
+
+      --------------
+      -- item_value
+      --------------
+      when c_item_values then
+        case
+          when pi_item.item_value is not null then l_return := c_quot||pi_item.item_value||c_quot;
+        else
+          null;
+        end case;
+
     end case;
 
     return l_return;
 
-  end get_apex_call_pio_parameter;
+  end get_diff_types;
 
 
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- with this function the bulk collect of handle_json function
+  -- will be executed via the for loop
+  --
+  -- History:
+  --  18-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
   function get_apex_items(pi_items               in t_item_values default null,
-                          pi_ig_items            in t_ig_items default null,
                           pi_tabform_items       in t_tabform_items default null,
-                          pi_load_save_or_delete in varchar2 default 'S',
-                          pi_item_or_type        in varchar2
-  )   
+                          pi_item_type_value     in varchar2)
     return clob
   as
     l_return clob;
 
   begin
-    case when pi_items is not null and pi_items.count > 0 then
-      case pi_load_save_or_delete
-        when 'S' then
-          for i in 1..pi_items.count
-          loop
-            ----------------------------------------
-            -- responsible for items and data_types
-            ----------------------------------------
-            l_return := l_return || get_apex_call_pio_parameter(pi_item => pi_items(i), pi_item_or_type => pi_item_or_type);
+    case
+      when pi_items is not null and pi_items.count > 0 then
+        for i in 1..pi_items.count
+        loop
+          ----------------------------------------
+          -- responsible for items and data_types
+          ----------------------------------------
+          l_return := l_return || get_diff_types(pi_item            => pi_items(i)
+                                               , pi_item_type_value => pi_item_type_value);
 
-            if not (i = pi_items.count) then
+          ------------------------------------
+          -- set a comma but not for the last
+          ------------------------------------
+          if not (i = pi_items.count) then
+            if pi_item_type_value = c_item_values then
+              l_return := l_return || ','|| c_cr||rpad(' ',22);
+            else
               l_return := l_return || ','|| c_cr||rpad(' ',16);
-            else 
-              null; 
             end if;
-          end loop;
-      end case;
-
+          else
+            null;
+          end if;
+        end loop;
       else
         null;
     end case;
@@ -620,6 +594,12 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- this function builds the different json_script elements
+  --
+  -- History:
+  --  18-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
   function create_json_script (
       pi_base_url                in varchar2 default null,
       pi_login_yes_no            in number,
@@ -634,9 +614,7 @@ as
       pi_pdf                     in number,
       pi_viewport_height         in number,
       pi_viewport_width          in number,
-      pi_delay                   in number,
-      pi_is_tab_or_ig            in number default 1,
-      pi_load_save_or_delete     in varchar2 default 'S'
+      pi_delay                   in number
   )
     return clob
   as
@@ -644,6 +622,7 @@ as
     l_items                       t_item_values := t_item_values();
     l_apex_items                  clob;
     l_apex_item_types             clob;
+    l_apex_item_values            clob;
     l_return                      clob;
 
   begin
@@ -656,13 +635,14 @@ as
                           ,pi_page_id      => pi_page_id
                           ,pi_region_name  => pi_region_name);
 
-    l_apex_items := get_apex_items(pi_items               => l_items
-                                 , pi_item_or_type        => c_items
-                                 , pi_load_save_or_delete => pi_load_save_or_delete);
+    l_apex_items := get_apex_items(pi_items            => l_items
+                                 , pi_item_type_value  => c_items);
 
-    l_apex_item_types := get_apex_items(pi_items               => l_items
-                                      , pi_item_or_type        => c_item_types
-                                      , pi_load_save_or_delete => pi_load_save_or_delete);
+    l_apex_item_types := get_apex_items(pi_items           => l_items
+                                      , pi_item_type_value => c_item_types);
+
+    l_apex_item_values := get_apex_items(pi_items           => l_items
+                                       , pi_item_type_value  => c_item_values);
 
     l_return := pup_json_string.replace_base_url(pi_source_script => pup_json_string.c_json_string , pi_base_url => l_base_url);
     l_return := pup_json_string.replace_login_yes_no(pi_source_script => l_return, pi_login_yes_no => pi_login_yes_no);
@@ -678,6 +658,7 @@ as
     -------------------------
     l_return := pup_json_string.replace_items(pi_source_script => l_return, pi_items => l_apex_items);
     l_return := pup_json_string.replace_item_types(pi_source_script => l_return, pi_items => l_apex_item_types);
+    l_return := pup_json_string.replace_item_values(pi_source_script => l_return, pi_items => l_apex_item_values);
     ---
 
     l_return := pup_json_string.replace_screenshot(pi_source_script => l_return , pi_screenshot => pi_screenshot);
@@ -733,9 +714,7 @@ as
                                    pi_pdf                     => pi_pdf,
                                    pi_viewport_height         => pi_viewport_height,
                                    pi_viewport_width          => pi_viewport_width,
-                                   pi_delay                   => pi_delay,
-                                   pi_is_tab_or_ig            => 0,
-                                   pi_load_save_or_delete     => 'S');
+                                   pi_delay                   => pi_delay);
 
     return l_return;
   end start_json;

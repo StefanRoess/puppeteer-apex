@@ -12,8 +12,10 @@ as
   c_cr          constant varchar2(10) := utl_tcp.crlf;
   c_space       constant varchar2(10) := ' ';
   c_space_space constant varchar2(10) := '  ';
+  c_quot        constant varchar2(10) := '"';
   c_items       constant varchar2(10) := 'ITEMS';
   c_item_types  constant varchar2(20) := 'ITEM_TYPES';
+  c_item_values constant varchar2(20) := 'ITEM_VALUES';
 
   --------------------
   -- type declaration

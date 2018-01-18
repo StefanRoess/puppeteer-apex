@@ -22,6 +22,8 @@ as
     %       "item": [ #PAGE_ITEMS#
     %       ],
     %       "type": [ #PAGE_ITEM_TYPES#
+    %       ],
+    %       "item_value": [ #PAGE_ITEM_VALUES#
     %       ]
     %     }],
     %     "screenshot": #SCREENSHOT#,
@@ -70,6 +72,10 @@ as
 
   function replace_item_types( pi_source_script in clob
                              , pi_items         in clob )
+    return clob;
+
+  function replace_item_values( pi_source_script in clob
+                              , pi_items         in clob )
     return clob;
 
   function replace_screenshot( pi_source_script in clob

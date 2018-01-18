@@ -531,51 +531,6 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
-  ---------------------------------------
-  -- page Items der Tabelle item_values
-  ---------------------------------------
-  function get_page_items(
-      pi_app_id       in number,
-      pi_page_id      in number,
-      pi_region_name  in varchar2 default null
-  )
-    return t_items
-  as
-    l_return t_items;
-
-  begin
-    select aapi.item_name,
-           aapi.display_as_code,
-           case
-            when upper(aapi.display_as)     = 'NUMBER FIELD'  then 'NUMBER'
-            when upper(aapi.item_data_type) = 'VARCHAR'       then 'VARCHAR2'
-              else upper(aapi.item_data_type)
-           end item_data_type,
-           aapi.is_required, -- Yes, No,
-           aapi.item_default,
-           aapr.region_name,
-           aapr.page_id,
-           aapr.source_type_code
-           bulk collect into l_return
-    from APEX_APPLICATION_PAGE_REGIONS aapr
-    join APEX_APPLICATION_PAGE_ITEMS aapi
-      on aapr.region_id       = aapi.region_id
-    where aapr.application_id = pi_app_id
-      and aapr.page_id        = pi_page_id
-      and aapr.region_name    = coalesce(pi_region_name,aapr.region_name)
-      and not exists (select 1
-                        from apex_application_page_items a 
-                        where 1=1
-                        and a.item_name = aapi.item_name
-                        and a.display_as_code in ('NATIVE_HIDDEN', 'NATIVE_DISPLAY_ONLY'))
-    order by aapi.display_sequence, aapr.region_name;
-
-    return l_return;
-  end get_page_items;
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
   function get_apex_call_pio_parameter(pi_item          in t_item_value default null,
                                        pi_ig_item       in t_ig_item default null,
                                        pi_tabform_item  in t_tabform_item default null,
@@ -665,7 +620,7 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
-  function get_apex_call_script (
+  function create_json_script (
       pi_base_url                in varchar2 default null,
       pi_login_yes_no            in number,
       pi_username                in varchar2 default null,
@@ -696,11 +651,7 @@ as
                              , pi_page_id => pi_page_id
                              , pi_base_url => pi_base_url);
 
-    -- l_items := get_page_items(pi_app_id       => pi_app_id
-    --                         , pi_page_id      => pi_page_id
-    --                         , pi_region_name  => pi_region_name);
-
-    -- hier sind im Bulk viele Items enthalten.
+    -- hier sind im bulk viele Items enthalten.
     l_items := handle_json(pi_app_id       => pi_app_id
                           ,pi_page_id      => pi_page_id
                           ,pi_region_name  => pi_region_name);
@@ -727,7 +678,8 @@ as
     -------------------------
     l_return := pup_json_string.replace_items(pi_source_script => l_return, pi_items => l_apex_items);
     l_return := pup_json_string.replace_item_types(pi_source_script => l_return, pi_items => l_apex_item_types);
-    --
+    ---
+
     l_return := pup_json_string.replace_screenshot(pi_source_script => l_return , pi_screenshot => pi_screenshot);
     l_return := pup_json_string.replace_pdf(pi_source_script => l_return , pi_pdf => pi_pdf);
     l_return := pup_json_string.replace_viewport_height(pi_source_script => l_return , pi_viewport_height => pi_viewport_height);
@@ -735,7 +687,7 @@ as
     l_return := pup_json_string.replace_delay(pi_source_script => l_return , pi_delay => pi_delay);
 
     return l_return;
-  end get_apex_call_script;
+  end create_json_script;
 
   /* =================================================================================== */
   /* =================================================================================== */
@@ -768,22 +720,22 @@ as
     l_return                    clob;
 
   begin
-    l_return := get_apex_call_script(pi_base_url                => pi_base_url,
-                                     pi_login_yes_no            => pi_login_yes_no,
-                                     pi_username                => pi_username,
-                                     pi_password                => pi_password,
-                                     pi_app_id                  => pi_app_id,
-                                     pi_page_id                 => pi_page_id,
-                                     pi_direct_yes_no           => pi_direct_yes_no,
-                                     pi_modal_yes_no            => pi_modal_yes_no,
-                                     pi_region_name             => pi_region_name,
-                                     pi_screenshot              => pi_screenshot,
-                                     pi_pdf                     => pi_pdf,
-                                     pi_viewport_height         => pi_viewport_height,
-                                     pi_viewport_width          => pi_viewport_width,
-                                     pi_delay                   => pi_delay,
-                                     pi_is_tab_or_ig            => 0,
-                                     pi_load_save_or_delete     => 'S');
+    l_return := create_json_script(pi_base_url                => pi_base_url,
+                                   pi_login_yes_no            => pi_login_yes_no,
+                                   pi_username                => pi_username,
+                                   pi_password                => pi_password,
+                                   pi_app_id                  => pi_app_id,
+                                   pi_page_id                 => pi_page_id,
+                                   pi_direct_yes_no           => pi_direct_yes_no,
+                                   pi_modal_yes_no            => pi_modal_yes_no,
+                                   pi_region_name             => pi_region_name,
+                                   pi_screenshot              => pi_screenshot,
+                                   pi_pdf                     => pi_pdf,
+                                   pi_viewport_height         => pi_viewport_height,
+                                   pi_viewport_width          => pi_viewport_width,
+                                   pi_delay                   => pi_delay,
+                                   pi_is_tab_or_ig            => 0,
+                                   pi_load_save_or_delete     => 'S');
 
     return l_return;
   end start_json;

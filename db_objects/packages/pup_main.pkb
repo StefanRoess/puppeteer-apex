@@ -5,7 +5,8 @@ as
   /* =================================================================================== */
   ---------------------------------------------------------------------------------------
   -- This procedure will be called by page 20 (after header pre-rendering)
-  -- pi_dml_flag decides if insertion or deletion will be accomplished
+  -- pi_dml_flag decides if insertion, deletion or merge will be accomplished
+  -- l_ig => delivers 1 = Interactive Grid or others (l_ig = 0)
   --
   -- History:
   --  17-Jan-2018 V1.0   Stefan Roess
@@ -29,14 +30,29 @@ as
       ---------------------------------------
       l_ig := pup_main.is_native_ig (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
 
-      if l_ig = 0 and pi_dml_flag = 'I' then
+      ----------
+      -- insert
+      ----------
+      if pi_dml_flag = 'I' and l_ig = 0 then
         insert_item_values    (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
-      elsif l_ig = 1 and pi_dml_flag = 'I' then
+      elsif pi_dml_flag = 'I' and l_ig = 1 then
         insert_item_ig_values (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
       end if;
 
+      ----------
+      -- delete
+      ----------
       if pi_dml_flag = 'D' then
         delete_item_values (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+      end if;
+
+      ---------
+      -- merge
+      ---------
+      if pi_dml_flag = 'M' and l_ig = 0 then
+        merge_item_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+      elsif pi_dml_flag = 'M' and l_ig = 1 then
+        merge_item_ig_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
       end if;
 
     end loop;
@@ -82,6 +98,38 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   ---------------------------------------------------------------------------------------
+  -- This procedure takes care for any changes in source (src)
+  --
+  -- History:
+  --  18-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  procedure merge_item_values  (pi_app_id      in number
+                              , pi_page_id     in number
+                              , pi_region_name in varchar2)
+  as
+  begin
+    MERGE INTO item_values dest
+      USING (select item_id
+                  , item_name
+                  , item_data_type
+                  , is_required
+                  , item_default
+                  , item_static_id
+              from table(pup_main.get_edit_items(pi_app_id, pi_page_id, pi_region_name))
+            ) src
+        ON (dest.item_id = src.item_id)
+      WHEN MATCHED THEN
+        UPDATE SET dest.item_name       = src.item_name,
+                   dest.item_data_type  = src.item_data_type,
+                   dest.is_required     = src.is_required,
+                   dest.item_default    = src.item_default,
+                   dest.item_static_id  = src.item_static_id;
+  end;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
   -- item_name and item_static_id will be the same for Forms-Item.
   --
   -- History:
@@ -116,7 +164,6 @@ as
            , pi_app_id, pi_page_id
         from table(pup_main.get_edit_items(pi_app_id, pi_page_id, pi_region_name));
   end;
-
 
   /* =================================================================================== */
   /* =================================================================================== */
@@ -230,6 +277,38 @@ as
     end loop;
 
   end get_edit_items;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- This procedure takes care for any changes in source (src)
+  --
+  -- History:
+  --  18-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  procedure merge_item_ig_values  (pi_app_id      in number
+                                 , pi_page_id     in number
+                                 , pi_region_name in varchar2)
+  as
+  begin
+    MERGE INTO item_values dest
+      USING (select item_id
+                  , item_name
+                  , item_data_type
+                  , is_required
+                  , item_default
+                  , item_static_id
+              from table(pup_main.get_edit_ig_items(pi_app_id, pi_page_id, pi_region_name))
+            ) src
+        ON (dest.item_id = src.item_id)
+      WHEN MATCHED THEN
+        UPDATE SET dest.item_name       = src.item_name,
+                   dest.item_data_type  = src.item_data_type,
+                   dest.is_required     = src.is_required,
+                   dest.item_default    = src.item_default,
+                   dest.item_static_id  = src.item_static_id;
+  end;
 
 
   /* =================================================================================== */

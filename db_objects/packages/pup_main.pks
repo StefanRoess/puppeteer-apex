@@ -84,6 +84,10 @@ as
   type t_ig_items       is table of t_ig_item;
   type t_tabform_items  is table of t_tabform_item;
 
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+
   -----------------------------------
   -- public functions and procedures
   -----------------------------------
@@ -113,9 +117,17 @@ as
   )
     return number;
 
+  procedure merge_item_values  (pi_app_id      in number
+                              , pi_page_id     in number
+                              , pi_region_name in varchar2);
+
   procedure insert_item_values  (pi_app_id      in number
                                , pi_page_id     in number
                                , pi_region_name in varchar2);
+
+  procedure merge_item_ig_values  (pi_app_id      in number
+                                 , pi_page_id     in number
+                                 , pi_region_name in varchar2);
 
   procedure insert_item_ig_values  (pi_app_id      in number
                                   , pi_page_id     in number

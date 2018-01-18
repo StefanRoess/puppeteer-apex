@@ -124,16 +124,9 @@ as
       pi_pdf                     in number,
       pi_viewport_height         in number,
       pi_viewport_width          in number,
-      pi_delay                   in number,
-      pi_tab_ig_prefix_proc_name in varchar2 default null --for the future to set it from outside
+      pi_delay                   in number
   )
     return clob;
-
-  function check_has_tab_ig_on_page(
-      pi_app_id   in number,
-      pi_page_id  in number
-  )
-    return number;  
 
   function modal_page_yes_no(
       pi_app_id   in number,

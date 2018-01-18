@@ -430,7 +430,6 @@ as
 
 
 
-
   /* clean till here */
 
 
@@ -485,6 +484,49 @@ as
       return (l_string);
   end get_region_ids;
 
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- l_ig => delivers 1 = Interactive Grid or others (l_ig = 0)
+  --
+  -- History:
+  --  18-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  function handle_json(pi_app_id      in number
+                     , pi_page_id     in number
+                     , pi_region_name in varchar2)
+    return t_item_values
+  as
+    l_return              t_item_values;
+    l_region_name         varchar2(300);
+    l_ig                  number;
+
+  begin
+    select  id,
+            item_id,
+            item_name,
+            item_value,
+            item_data_type,
+            item_default,
+            item_type,
+            item_static_id,
+            is_required,
+            region_id,
+            region_name,
+            app_id,
+            page_id
+      bulk collect into l_return
+      from item_values
+      where 1=1
+      and app_id  = pi_app_id
+      and page_id = pi_page_id
+      and  instr (':'|| pi_region_name || ':', ':'|| region_name||':') > 0;
+
+    return l_return;
+
+  end;
+
 
   /* =================================================================================== */
   /* =================================================================================== */
@@ -534,7 +576,7 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
-  function get_apex_call_pio_parameter(pi_item          in t_item default null,
+  function get_apex_call_pio_parameter(pi_item          in t_item_value default null,
                                        pi_ig_item       in t_ig_item default null,
                                        pi_tabform_item  in t_tabform_item default null,
                                        pi_item_or_type  in varchar2
@@ -569,8 +611,6 @@ as
             then l_return := pi_item.item_data_type;
           when pi_ig_item.item_data_type is not null
             then l_return := '      ' || pi_ig_item.item_data_type;
-         -- when pi_tabform_item.item_data_type is not null
-         --   then l_return := '      ' || pi_tabform_item.item_data_type;
         else
           null;
         end case;
@@ -585,7 +625,7 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
-  function get_apex_items(pi_items               in t_items default null,
+  function get_apex_items(pi_items               in t_item_values default null,
                           pi_ig_items            in t_ig_items default null,
                           pi_tabform_items       in t_tabform_items default null,
                           pi_load_save_or_delete in varchar2 default 'S',
@@ -646,7 +686,7 @@ as
     return clob
   as
     l_base_url                    varchar2(100);
-    l_items                       t_items := t_items();
+    l_items                       t_item_values := t_item_values();
     l_apex_items                  clob;
     l_apex_item_types             clob;
     l_return                      clob;
@@ -656,9 +696,14 @@ as
                              , pi_page_id => pi_page_id
                              , pi_base_url => pi_base_url);
 
-    l_items := get_page_items(pi_app_id       => pi_app_id
-                            , pi_page_id      => pi_page_id
-                            , pi_region_name  => pi_region_name);
+    -- l_items := get_page_items(pi_app_id       => pi_app_id
+    --                         , pi_page_id      => pi_page_id
+    --                         , pi_region_name  => pi_region_name);
+
+    -- hier sind im Bulk viele Items enthalten.
+    l_items := handle_json(pi_app_id       => pi_app_id
+                          ,pi_page_id      => pi_page_id
+                          ,pi_region_name  => pi_region_name);
 
     l_apex_items := get_apex_items(pi_items               => l_items
                                  , pi_item_or_type        => c_items

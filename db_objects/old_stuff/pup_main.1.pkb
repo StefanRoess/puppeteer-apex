@@ -489,6 +489,9 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
+  ---------------------------------------
+  -- page Items der Tabelle item_values
+  ---------------------------------------
   function get_page_items(
       pi_app_id       in number,
       pi_page_id      in number,
@@ -531,74 +534,6 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
-  function get_regions(
-      pi_app_id       in number,
-      pi_page_id      in number,
-      pi_region_name  in varchar2 default null
-  )
-    return t_regions
-  as
-    l_return t_regions;
-
-  begin
-    $IF pup_constants.c_apex_version_5_1 or pup_constants.c_apex_version_5_1_greater
-    $THEN
-
-        -- if pi_pk_column is not null and instr(pi_pk_column,':') > 0
-        --   then
-        --     l_tab_ig_pk_cols := APEX_UTIL.STRING_TO_TABLE(p_string => pi_pk_column, p_separator => ':');
-        --   else
-        --     l_tab_ig_pk_cols(1) := pi_pk_column;
-        -- end if;
-
-          -- if i <= l_tab_ig_pk_cols.count and l_tab_ig_pk_cols(i) is not null
-          --   then
-          --     l_pk_column := l_tab_ig_pk_cols(i);
-          --   else
-          --     l_pk_column := 'ROWID';    -- l_pk_column entspricht dann dem l_region_name
-          -- end if;
-
-        select aapr.region_name, aapr.source_type_code
-               bulk collect into l_return
-          from APEX_APPLICATION_PAGE_REGIONS aapr
-          where 1=1
-          and aapr.application_id = pi_app_id
-          and aapr.page_id        = pi_page_id
-          and aapr.region_name    = coalesce(pi_region_name,aapr.region_name)
-          order by aapr.display_sequence, aapr.region_name;
-    $END
-
-    return l_return;
-  end get_regions;
-
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  function get_ig_regions(pi_regions in t_regions)
-    return t_regions
-  as
-    l_extend_count  number    := 0;
-    l_return        t_regions := t_regions();
-
-  begin
-    for i in 1..pi_regions.count
-    loop
-      if pi_regions(i).source_type_code = 'NATIVE_IG'
-        then
-          l_return.extend;
-          l_extend_count := l_extend_count + 1;
-          l_return(l_extend_count) := pi_regions(i);
-      end if;
-    end loop;
-
-    return l_return;
-  end get_ig_regions;
-
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
   function get_apex_call_pio_parameter(pi_item          in t_item default null,
                                        pi_ig_item       in t_ig_item default null,
                                        pi_tabform_item  in t_tabform_item default null,
@@ -624,6 +559,7 @@ as
         else
           null;
         end case;
+
      when c_item_types then
         ------------------
         -- item_data_type
@@ -731,7 +667,7 @@ as
     l_apex_item_types := get_apex_items(pi_items               => l_items
                                       , pi_item_or_type        => c_item_types
                                       , pi_load_save_or_delete => pi_load_save_or_delete);
-    
+
     l_return := pup_json_string.replace_base_url(pi_source_script => pup_json_string.c_json_string , pi_base_url => l_base_url);
     l_return := pup_json_string.replace_login_yes_no(pi_source_script => l_return, pi_login_yes_no => pi_login_yes_no);
     l_return := pup_json_string.replace_username(pi_source_script => l_return, pi_username => pi_username);
@@ -740,6 +676,10 @@ as
     l_return := pup_json_string.replace_page_id(pi_source_script => l_return , pi_page_id => pi_page_id);
     l_return := pup_json_string.replace_direct_page(pi_source_script => l_return , pi_direct_yes_no => pi_direct_yes_no);
     l_return := pup_json_string.replace_modal_page(pi_source_script => l_return , pi_modal_yes_no => pi_modal_yes_no);
+
+    -------------------------
+    -- wiederholdende Aktion
+    -------------------------
     l_return := pup_json_string.replace_items(pi_source_script => l_return, pi_items => l_apex_items);
     l_return := pup_json_string.replace_item_types(pi_source_script => l_return, pi_items => l_apex_item_types);
     --
@@ -751,114 +691,6 @@ as
 
     return l_return;
   end get_apex_call_script;
-
-
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  function  get_save_proc_for_apex_proc(
-      pi_base_url                in varchar2 default null,
-      pi_login_yes_no            in number,
-      pi_username                in varchar2 default null,
-      pi_password                in varchar2 default null,
-      pi_app_id                  in number,
-      pi_page_id                 in number,
-      pi_direct_yes_no           in number,
-      pi_modal_yes_no            in number,
-      pi_region_name             in varchar2 default null,
-      pi_screenshot              in number,
-      pi_pdf                     in number,
-      pi_viewport_height         in number,
-      pi_viewport_width          in number,
-      pi_delay                   in number,
-      pi_is_tab_or_ig            in number default 1,
-      pi_tab_ig_prefix_proc_name in varchar2 default null
-   )
-    return clob
-  as
-    l_return clob;
-
-  begin
-    case pi_is_tab_or_ig
-      when 0
-        then
-          l_return := get_apex_call_script(
-                            pi_base_url                => pi_base_url,
-                            pi_login_yes_no            => pi_login_yes_no,
-                            pi_username                => pi_username,
-                            pi_password                => pi_password,
-                            pi_app_id                  => pi_app_id,
-                            pi_page_id                 => pi_page_id,
-                            pi_direct_yes_no           => pi_direct_yes_no,
-                            pi_modal_yes_no            => pi_modal_yes_no,
-                            pi_region_name             => pi_region_name,
-                            pi_screenshot              => pi_screenshot,
-                            pi_pdf                     => pi_pdf,
-                            pi_viewport_height         => pi_viewport_height,
-                            pi_viewport_width          => pi_viewport_width,
-                            pi_delay                   => pi_delay,
-                            pi_is_tab_or_ig            => 1,
-                            pi_load_save_or_delete     => 'S'
-          );
-      else
-        null;
-    end case;
-    return l_return;
-  end get_save_proc_for_apex_proc;
-
-  /* ================================================================== */
-  /* == call from dynamic action "on Change set P10_PAGE_ID" ========== */
-  /* ================================================================== */
-  function modal_page_yes_no(
-      pi_app_id   in number,
-      pi_page_id  in number
-  )
-    return number
-  as
-    l_return number;
-
-  begin
-    $IF pup_constants.c_apex_version_5_1 or pup_constants.c_apex_version_5_1_greater
-    $THEN
-      select count(*)
-        into l_return
-        from apex_application_pages
-        where application_id = pi_app_id
-        and page_id = pi_page_id
-        and upper(page_mode) ='MODAL DIALOG';
-    $END
-
-    return l_return;
-  end;
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  function check_has_tab_ig_on_page(
-      pi_app_id   in number,
-      pi_page_id  in number
-  )
-    return number
-  as
-    l_return number;
-
-  begin
-    $IF pup_constants.c_apex_version_5_1 or pup_constants.c_apex_version_5_1_greater
-    $THEN
-      select count(*)
-        into l_return
-        from APEX_APPL_PAGE_IGS aaig
-        join APEX_APPLICATION_PAGE_REGIONS aapr
-          on aapr.region_id = aaig.region_id
-       where aaig.application_id = pi_app_id
-         and aaig.page_id = pi_page_id
-         and aapr.source_type_code = 'NATIVE_IG';
-    $END
-
-    return l_return;
-  end check_has_tab_ig_on_page;
-
 
   /* =================================================================================== */
   /* =================================================================================== */
@@ -884,75 +716,61 @@ as
       pi_pdf                     in number,
       pi_viewport_height         in number,
       pi_viewport_width          in number,
-      pi_delay                   in number,
-      pi_tab_ig_prefix_proc_name in varchar2 default null --for the future to set it from outside
+      pi_delay                   in number
   )
     return clob
   as
-    l_regions         t_regions;
-    l_ig_regions      t_regions;
-    l_tabform_regions t_regions;
-
-    l_tab_ig_prefix_proc_name   varchar2(30);
-    l_tab_ig_prefixes           apex_application_global.vc_arr2;
-    l_tab_ig_pk_cols            apex_application_global.vc_arr2;
-    l_count_other_regions_as_ig number := 0;
-    l_pk_column                 varchar2(30);
-
-    l_save                      clob;
-    l_update                    clob;
-    l_delete                    clob;
-    l_ig_tab_call_process       clob;
-
     l_return                    clob;
 
   begin
-    -- todo
-    -- übergabe an eine neue Page (Modal), diese listet alle editierbaren Items und editierbare IG Columns auf.
-
-    -- l_regions := get_regions(pi_app_id      => pi_app_id,
-    --                          pi_page_id     => pi_page_id,
-    --                          pi_region_name => pi_region_name
-    --                         );
-
-    -- -------------------------------------------------
-    -- -- how many regions do we have on a certain page
-    -- -------------------------------------------------
-    -- for i in 1..l_regions.count
-    -- loop
-    --   if l_regions(i).source_type_code = 'NATIVE_IG' or l_regions(i).source_type_code = 'NATIVE_TABFORM'
-    --     then
-    --        null;
-    --     else
-    --       l_count_other_regions_as_ig := l_count_other_regions_as_ig + 1;
-    --   end if;
-    -- end loop;
-
-    -- Stefan Roess
-    l_count_other_regions_as_ig := 1;
-
-    if l_count_other_regions_as_ig > 0
-      then
-        l_return := get_save_proc_for_apex_proc(pi_base_url                => pi_base_url,
-                                                pi_login_yes_no            => pi_login_yes_no,
-                                                pi_username                => pi_username,
-                                                pi_password                => pi_password,
-                                                pi_app_id                  => pi_app_id,
-                                                pi_page_id                 => pi_page_id,
-                                                pi_direct_yes_no           => pi_direct_yes_no,
-                                                pi_modal_yes_no            => pi_modal_yes_no,
-                                                pi_region_name             => pi_region_name,
-                                                pi_screenshot              => pi_screenshot,
-                                                pi_pdf                     => pi_pdf,
-                                                pi_viewport_height         => pi_viewport_height,
-                                                pi_viewport_width          => pi_viewport_width,
-                                                pi_delay                   => pi_delay,
-                                                pi_is_tab_or_ig            => 0,
-                                                pi_tab_ig_prefix_proc_name => l_tab_ig_prefix_proc_name);
-    end if;
+    l_return := get_apex_call_script(pi_base_url                => pi_base_url,
+                                     pi_login_yes_no            => pi_login_yes_no,
+                                     pi_username                => pi_username,
+                                     pi_password                => pi_password,
+                                     pi_app_id                  => pi_app_id,
+                                     pi_page_id                 => pi_page_id,
+                                     pi_direct_yes_no           => pi_direct_yes_no,
+                                     pi_modal_yes_no            => pi_modal_yes_no,
+                                     pi_region_name             => pi_region_name,
+                                     pi_screenshot              => pi_screenshot,
+                                     pi_pdf                     => pi_pdf,
+                                     pi_viewport_height         => pi_viewport_height,
+                                     pi_viewport_width          => pi_viewport_width,
+                                     pi_delay                   => pi_delay,
+                                     pi_is_tab_or_ig            => 0,
+                                     pi_load_save_or_delete     => 'S');
 
     return l_return;
   end start_json;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+
+  /* ================================================================== */
+  /* == call from dynamic action "on Change set P10_PAGE_ID" ========== */
+  /* ================================================================== */
+  function modal_page_yes_no(
+      pi_app_id   in number,
+      pi_page_id  in number
+  )
+    return number
+  as
+    l_return number;
+
+  begin
+    $IF pup_constants.c_apex_version_5_1 or pup_constants.c_apex_version_5_1_greater
+    $THEN
+      select count(*)
+        into l_return
+        from apex_application_pages
+        where application_id = pi_app_id
+        and page_id = pi_page_id
+        and upper(page_mode) ='MODAL DIALOG';
+    $END
+
+    return l_return;
+  end;
 
 ------------------
 -- end of program

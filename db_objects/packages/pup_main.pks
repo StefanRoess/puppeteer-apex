@@ -34,6 +34,22 @@ as
     region_source_type_code varchar2(255)
   );
 
+  type t_item_value is record(
+      id                      number
+    , item_id                 number
+    , item_name               varchar2(300 char)
+    , item_value              varchar2(300 char)
+    , item_data_type          varchar2(300 char)
+    , item_default            varchar2(300 char)
+    , item_type               varchar2(300 char)
+    , item_static_id          varchar2(300 char)
+    , is_required             varchar2(100 char)
+    , region_id               number
+    , region_name             varchar2(300 char)
+    , app_id                  number
+    , page_id                 number
+  );
+
   type t_edit_item is record(
     item_id         number,
     item_name       varchar2(300),
@@ -79,10 +95,12 @@ as
   ----------------------------
   type t_regions        is table of t_region;
   type t_items          is table of t_item;
+  type t_item_values    is table of t_item_value;
   type t_edit_items     is table of t_edit_item;
   type t_edit_ig_items  is table of t_edit_ig_item;
   type t_ig_items       is table of t_ig_item;
   type t_tabform_items  is table of t_tabform_item;
+
 
   /* =================================================================================== */
   /* =================================================================================== */

@@ -128,12 +128,6 @@ as
   )
     return clob;
 
-  function check_has_tab_ig_on_page(
-      pi_app_id   in number,
-      pi_page_id  in number
-  )
-    return number;  
-
   function modal_page_yes_no(
       pi_app_id   in number,
       pi_page_id  in number

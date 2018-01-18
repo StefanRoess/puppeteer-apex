@@ -720,20 +720,6 @@ as
   )
     return clob
   as
-    l_regions         t_regions;
-    l_ig_regions      t_regions;
-    l_tabform_regions t_regions;
-
-    l_tab_ig_prefix_proc_name   varchar2(30);
-    l_tab_ig_prefixes           apex_application_global.vc_arr2;
-    l_tab_ig_pk_cols            apex_application_global.vc_arr2;
-    l_pk_column                 varchar2(30);
-
-    l_save                      clob;
-    l_update                    clob;
-    l_delete                    clob;
-    l_ig_tab_call_process       clob;
-
     l_return                    clob;
 
   begin
@@ -785,34 +771,6 @@ as
 
     return l_return;
   end;
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  function check_has_tab_ig_on_page(
-      pi_app_id   in number,
-      pi_page_id  in number
-  )
-    return number
-  as
-    l_return number;
-
-  begin
-    $IF pup_constants.c_apex_version_5_1 or pup_constants.c_apex_version_5_1_greater
-    $THEN
-      select count(*)
-        into l_return
-        from APEX_APPL_PAGE_IGS aaig
-        join APEX_APPLICATION_PAGE_REGIONS aapr
-          on aapr.region_id = aaig.region_id
-       where aaig.application_id = pi_app_id
-         and aaig.page_id = pi_page_id
-         and aapr.source_type_code = 'NATIVE_IG';
-    $END
-
-    return l_return;
-  end check_has_tab_ig_on_page;
-
 
 ------------------
 -- end of program

@@ -110,33 +110,6 @@ as
                              , pi_region_name in varchar2
                              , pi_dml_flag    in varchar2);
 
-  function is_native_ig(
-    pi_app_id      in number,
-    pi_page_id     in number,
-    pi_region_name in varchar2
-  )
-    return number;
-
-  procedure merge_item_values  (pi_app_id      in number
-                              , pi_page_id     in number
-                              , pi_region_name in varchar2);
-
-  procedure insert_item_values  (pi_app_id      in number
-                               , pi_page_id     in number
-                               , pi_region_name in varchar2);
-
-  procedure merge_item_ig_values  (pi_app_id      in number
-                                 , pi_page_id     in number
-                                 , pi_region_name in varchar2);
-
-  procedure insert_item_ig_values  (pi_app_id      in number
-                                  , pi_page_id     in number
-                                  , pi_region_name in varchar2);
-
-  procedure delete_item_values  (pi_app_id      in number
-                               , pi_page_id     in number
-                               , pi_region_name in varchar2);
-
   function start_json(
       pi_base_url                in varchar2 default null,
       pi_login_yes_no            in number,

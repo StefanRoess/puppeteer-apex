@@ -4,193 +4,6 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   ---------------------------------------------------------------------------------------
-  -- This procedure will be called by page 20 (after header pre-rendering)
-  -- pi_dml_flag decides if insertion, deletion or merge will be accomplished
-  -- l_ig => delivers 1 = Interactive Grid or others (l_ig = 0)
-  --
-  -- History:
-  --  17-Jan-2018 V1.0   Stefan Roess
-  ---------------------------------------------------------------------------------------
-  procedure handle_all_regions(pi_app_id      in number
-                             , pi_page_id     in number
-                             , pi_region_name in varchar2
-                             , pi_dml_flag    in varchar2)
-  as
-    l_vc_arr_region_name  apex_application_global.vc_arr2;
-    l_ig                  number;
-
-  begin
-    l_vc_arr_region_name := apex_util.string_to_table (ltrim (pi_region_name, ':'));
-
-    for l_i in 1 .. l_vc_arr_region_name.count
-    loop
-      ---------------------------------------
-      -- is this region an Interactive Grid?
-      -- l_ig = 1
-      ---------------------------------------
-      l_ig := pup_main.is_native_ig (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
-
-      ----------
-      -- insert
-      ----------
-      if pi_dml_flag = 'I' and l_ig = 0 then
-        insert_item_values    (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
-      elsif pi_dml_flag = 'I' and l_ig = 1 then
-        insert_item_ig_values (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
-      end if;
-
-      ----------
-      -- delete
-      ----------
-      if pi_dml_flag = 'D' then
-        delete_item_values (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
-      end if;
-
-      ---------
-      -- merge
-      ---------
-      if pi_dml_flag = 'M' and l_ig = 0 then
-        merge_item_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
-      elsif pi_dml_flag = 'M' and l_ig = 1 then
-        merge_item_ig_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
-      end if;
-
-    end loop;
-  end;
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  ---------------------------------------------------------------------------------------
-  -- is this certain region on a certain app_id and page_id an interactive report?
-  --
-  -- History:
-  --  17-Jan-2018 V1.0   Stefan Roess
-  ---------------------------------------------------------------------------------------
-  function is_native_ig(
-    pi_app_id      in number,
-    pi_page_id     in number,
-    pi_region_name in varchar2
-  )
-    return number
-  as
-    l_return number;
-
-  begin
-    select 1
-      into l_return
-      from apex_application_page_regions
-      where 1=1
-      and application_id    = pi_app_id
-      and page_id           = pi_page_id
-      and region_name       = pi_region_name
-      and source_type_code  = 'NATIVE_IG';
-
-    return l_return;
-
-  exception
-    when no_data_found then
-      l_return := 0;
-      return l_return;
-  end;
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  ---------------------------------------------------------------------------------------
-  -- This procedure takes care for any changes in source (src)
-  --
-  -- History:
-  --  18-Jan-2018 V1.0   Stefan Roess
-  ---------------------------------------------------------------------------------------
-  procedure merge_item_values  (pi_app_id      in number
-                              , pi_page_id     in number
-                              , pi_region_name in varchar2)
-  as
-  begin
-    MERGE INTO item_values dest
-      USING (select item_id
-                  , item_name
-                  , item_data_type
-                  , is_required
-                  , item_default
-                  , item_static_id
-              from table(pup_main.get_edit_items(pi_app_id, pi_page_id, pi_region_name))
-            ) src
-        ON (dest.item_id = src.item_id)
-      WHEN MATCHED THEN
-        UPDATE SET dest.item_name       = src.item_name,
-                   dest.item_data_type  = src.item_data_type,
-                   dest.is_required     = src.is_required,
-                   dest.item_default    = src.item_default,
-                   dest.item_static_id  = src.item_static_id;
-  end;
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  ---------------------------------------------------------------------------------------
-  -- item_name and item_static_id will be the same for Forms-Item.
-  --
-  -- History:
-  --  17-Jan-2018 V1.0   Stefan Roess
-  ---------------------------------------------------------------------------------------
-  procedure insert_item_values  (pi_app_id      in number
-                               , pi_page_id     in number
-                               , pi_region_name in varchar2)
-  as
-    l_item_type varchar2(10) := 'Forms-Item';
-
-  begin
-    insert into item_values (item_id
-                           , item_name
-                           , item_type
-                           , item_data_type
-                           , is_required
-                           , item_default
-                           , item_static_id
-                           , region_id
-                           , region_name
-                           , app_id, page_id)
-      select item_id
-           , item_name
-           , l_item_type
-           , item_data_type
-           , is_required
-           , item_default
-           , item_static_id
-           , region_id
-           , region_name
-           , pi_app_id, pi_page_id
-        from table(pup_main.get_edit_items(pi_app_id, pi_page_id, pi_region_name));
-  end;
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  ---------------------------------------------------------------------------------------
-  -- Deletion of certain values for Forms-Item in table item_values
-  --
-  -- History:
-  --  17-Jan-2018 V1.0   Stefan Roess
-  ---------------------------------------------------------------------------------------
-  procedure delete_item_values  (pi_app_id      in number
-                               , pi_page_id     in number
-                               , pi_region_name in varchar2)
-  as
-  begin
-    delete from item_values
-      where 1=1
-      and app_id = pi_app_id
-      and page_Id = pi_page_id
-      and region_name = pi_region_name;
-  end;
-
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  ---------------------------------------------------------------------------------------
   -- Delivers all editable items.
   -- This means no items like readonly, hidden or NATIVE_DISPLAY_ONLY.
   --
@@ -198,7 +11,7 @@ as
   --  17-Jan-2018 V1.0   Stefan Roess
   --
   -- call example:
- -- select *
+  -- select *
   --   from table(
   --           pup_main.get_edit_items(:P20_APP_ID, :P20_PAGE_ID, :P20_REGION_NAME)
   --         );
@@ -282,79 +95,6 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   ---------------------------------------------------------------------------------------
-  -- This procedure takes care for any changes in source (src)
-  --
-  -- History:
-  --  18-Jan-2018 V1.0   Stefan Roess
-  ---------------------------------------------------------------------------------------
-  procedure merge_item_ig_values  (pi_app_id      in number
-                                 , pi_page_id     in number
-                                 , pi_region_name in varchar2)
-  as
-  begin
-    MERGE INTO item_values dest
-      USING (select item_id
-                  , item_name
-                  , item_data_type
-                  , is_required
-                  , item_default
-                  , item_static_id
-              from table(pup_main.get_edit_ig_items(pi_app_id, pi_page_id, pi_region_name))
-            ) src
-        ON (dest.item_id = src.item_id)
-      WHEN MATCHED THEN
-        UPDATE SET dest.item_name       = src.item_name,
-                   dest.item_data_type  = src.item_data_type,
-                   dest.is_required     = src.is_required,
-                   dest.item_default    = src.item_default,
-                   dest.item_static_id  = src.item_static_id;
-  end;
-
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  ---------------------------------------------------------------------------------------
-  -- item_name and item_static_id will be the same for Forms-Item.
-  --
-  -- History:
-  --  17-Jan-2018 V1.0   Stefan Roess
-  ---------------------------------------------------------------------------------------
-  procedure insert_item_ig_values  (pi_app_id      in number
-                                  , pi_page_id     in number
-                                  , pi_region_name in varchar2)
-  as
-    l_item_type varchar2(20) := 'IG-Column-Item';
-
-  begin
-    insert into item_values (item_id
-                           , item_name
-                           , item_type
-                           , item_data_type
-                           , is_required
-                           , item_default
-                           , item_static_id
-                           , region_id
-                           , region_name
-                           , app_id, page_id)
-      select item_id
-           , item_name
-           , l_item_type
-           , item_data_type
-           , is_required
-           , item_default
-           , item_static_id
-           , region_id
-           , region_name
-           , pi_app_id, pi_page_id
-        from table(pup_main.get_edit_ig_items(pi_app_id, pi_page_id, pi_region_name));
-  end;
-
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  ---------------------------------------------------------------------------------------
   -- Delivers all editable interactive grid items.
   -- This means no items like readonly, hidden or NATIVE_DISPLAY_ONLY.
   --
@@ -430,6 +170,264 @@ as
     end loop;
 
   end get_edit_ig_items;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- is this certain region_name for a certain app_id and page_id an interactive report?
+  --
+  -- History:
+  --  17-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  function is_native_ig(
+    pi_app_id      in number,
+    pi_page_id     in number,
+    pi_region_name in varchar2
+  )
+    return number
+  as
+    l_return number;
+
+  begin
+    select 1
+      into l_return
+      from apex_application_page_regions
+      where 1=1
+      and application_id    = pi_app_id
+      and page_id           = pi_page_id
+      and region_name       = pi_region_name
+      and source_type_code  = 'NATIVE_IG';
+
+    return l_return;
+
+  exception
+    when no_data_found then
+      l_return := 0;
+      return l_return;
+  end;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- This procedure takes care for any changes in source (src) for Forms-Items
+  -- and insert into or modify for item_values
+  --
+  -- History:
+  --  18-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  procedure merge_item_values  (pi_app_id      in number
+                              , pi_page_id     in number
+                              , pi_region_name in varchar2)
+  as
+    l_item_type varchar2(10) := 'Forms-Item';
+
+  begin
+    merge into item_values dest
+      using (select item_id
+                  , item_name
+                  , item_data_type
+                  , is_required
+                  , item_default
+                  , item_static_id
+                  , region_id
+                  , region_name
+              from table(get_edit_items(pi_app_id, pi_page_id, pi_region_name))
+            ) src
+        on (dest.item_id = src.item_id)
+      when matched then
+        update set dest.item_name       = src.item_name,
+                   dest.item_data_type  = src.item_data_type,
+                   dest.is_required     = src.is_required,
+                   dest.item_default    = src.item_default,
+                   dest.item_static_id  = src.item_static_id
+      when not matched then
+        insert (item_id
+              , item_name
+              , item_type
+              , item_data_type
+              , is_required
+              , item_default
+              , item_static_id
+              , region_id
+              , region_name
+              , app_id, page_id)
+          values (src.item_id
+                , src.item_name
+                , l_item_type
+                , src.item_data_type
+                , src.is_required
+                , src.item_default
+                , src.item_static_id
+                , src.region_id
+                , src.region_name
+                , pi_app_id, pi_page_id);
+  end;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- This procedure takes care for any changes in source (src) for IG-Column-Item
+  -- and insert into or modify for item_values
+  --
+  -- History:
+  --  18-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  procedure merge_item_ig_values  (pi_app_id      in number
+                                 , pi_page_id     in number
+                                 , pi_region_name in varchar2)
+  as
+    l_item_type varchar2(20) := 'IG-Column-Item';
+
+  begin
+    merge into item_values dest
+      using (select item_id
+                  , item_name
+                  , item_data_type
+                  , is_required
+                  , item_default
+                  , item_static_id
+                  , region_id
+                  , region_name
+              from table(get_edit_ig_items(pi_app_id, pi_page_id, pi_region_name))
+            ) src
+        on (dest.item_id = src.item_id)
+      when matched then
+        update set dest.item_name       = src.item_name,
+                   dest.item_data_type  = src.item_data_type,
+                   dest.is_required     = src.is_required,
+                   dest.item_default    = src.item_default,
+                   dest.item_static_id  = src.item_static_id
+      when not matched then
+        insert (item_id
+              , item_name
+              , item_type
+              , item_data_type
+              , is_required
+              , item_default
+              , item_static_id
+              , region_id
+              , region_name
+              , app_id, page_id)
+          values (src.item_id
+                , src.item_name
+                , l_item_type
+                , src.item_data_type
+                , src.is_required
+                , src.item_default
+                , src.item_static_id
+                , src.region_id
+                , src.region_name
+                , pi_app_id, pi_page_id);
+  end;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- Deletion of certain values for Forms-Item in table item_values
+  --
+  -- History:
+  --  17-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  procedure delete_item_values  (pi_app_id      in number
+                               , pi_page_id     in number
+                               , pi_region_name in varchar2)
+  as
+  begin
+    delete from item_values dest
+      where 1=1
+      and app_id      = pi_app_id
+      and page_Id     = pi_page_id
+      and region_name = pi_region_name
+      and 0 = (select count (1)
+                 from table(get_edit_items(pi_app_id, pi_page_id, pi_region_name)) src
+                 where 1 = 1
+                 and dest.item_id = src.item_id);
+  end;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- Deletion of certain values for IG-Column-Item in table item_values
+  --
+  -- History:
+  --  18-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  procedure delete_item_ig_values  (pi_app_id      in number
+                                  , pi_page_id     in number
+                                  , pi_region_name in varchar2)
+  as
+  begin
+    delete from item_values dest
+      where 1=1
+      and app_id      = pi_app_id
+      and page_Id     = pi_page_id
+      and region_name = pi_region_name
+      and 0 = (select count (1)
+                 from table(get_edit_ig_items(pi_app_id, pi_page_id, pi_region_name)) src
+                 where 1 = 1
+                 and dest.item_id = src.item_id);
+  end;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- This procedure will be called by page 20 (after header pre-rendering)
+  -- pi_dml_flag decides if insertion, deletion or merge will be accomplished
+  -- l_ig => delivers 1 = Interactive Grid or others (l_ig = 0)
+  --
+  -- History:
+  --  17-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  procedure handle_all_regions(pi_app_id      in number
+                             , pi_page_id     in number
+                             , pi_region_name in varchar2
+                             , pi_dml_flag    in varchar2)
+  as
+    l_vc_arr_region_name  apex_application_global.vc_arr2;
+    l_ig                  number;
+
+  begin
+    l_vc_arr_region_name := apex_util.string_to_table (ltrim (pi_region_name, ':'));
+
+    for l_i in 1 .. l_vc_arr_region_name.count
+    loop
+      ---------------------------------------
+      -- is this region an Interactive Grid?
+      -- l_ig = 1
+      ---------------------------------------
+      l_ig := is_native_ig (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+
+      ---------
+      -- merge
+      ---------
+      if pi_dml_flag = 'M' and l_ig = 0 then
+        merge_item_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+      elsif pi_dml_flag = 'M' and l_ig = 1 then
+        merge_item_ig_values(pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+      end if;
+
+      ----------
+      -- delete
+      ----------
+      if pi_dml_flag = 'D' and l_ig = 0 then
+        delete_item_values (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+      elsif pi_dml_flag = 'D' and l_ig = 1 then
+        delete_item_ig_values (pi_app_id, pi_page_id, l_vc_arr_region_name(l_i));
+      end if;
+
+    end loop;
+  end;
+
+
+
+
+
 
 
   /* clean till here */
@@ -729,8 +727,10 @@ as
         when 'S' then
           for i in 1..pi_items.count
           loop
-            l_return := l_return || get_apex_call_pio_parameter(pi_item         => pi_items(i)
-                                                              , pi_item_or_type => pi_item_or_type);
+            ----------------------------------------
+            -- responsible for items and data_types
+            ----------------------------------------
+            l_return := l_return || get_apex_call_pio_parameter(pi_item => pi_items(i), pi_item_or_type => pi_item_or_type);
 
             if not (i = pi_items.count) then
               l_return := l_return || ','|| c_cr||rpad(' ',16);
@@ -1010,58 +1010,58 @@ as
                                                 pi_tab_ig_prefix_proc_name => l_tab_ig_prefix_proc_name);
     end if;
 
-    /* ============================================================================ */
-    /* ==  Compiler Directive  ==================================================== */
-    /* ============================================================================ */
-    $if pup_constants.c_apex_version_5_1 or pup_constants.c_apex_version_5_1_greater
-    $then
-      l_ig_regions := get_ig_regions(pi_regions => l_regions);
-        -----------------------------------------------------------------
-        --TODO pi_tab_ig_prefix_proc_name, pi_pk_column pk coloumns
-        --can be more if we had 2 or more IG on page same for ig_prefix
-        -----------------------------------------------------------------
-      if l_ig_regions is not null and l_ig_regions.count > 0
-        then
-          if pi_tab_ig_prefix_proc_name is not null and instr(pi_tab_ig_prefix_proc_name,',') > 0
-            then
-              l_tab_ig_prefixes := APEX_UTIL.STRING_TO_TABLE(p_string => pi_tab_ig_prefix_proc_name, p_separator => ',');
-            else
-              l_tab_ig_prefixes(1) := pi_tab_ig_prefix_proc_name;
-          end if;
+    -- /* ============================================================================ */
+    -- /* ==  Compiler Directive  ==================================================== */
+    -- /* ============================================================================ */
+    -- $if pup_constants.c_apex_version_5_1 or pup_constants.c_apex_version_5_1_greater
+    -- $then
+    --   l_ig_regions := get_ig_regions(pi_regions => l_regions);
+    --     -----------------------------------------------------------------
+    --     --TODO pi_tab_ig_prefix_proc_name, pi_pk_column pk coloumns
+    --     --can be more if we had 2 or more IG on page same for ig_prefix
+    --     -----------------------------------------------------------------
+    --   if l_ig_regions is not null and l_ig_regions.count > 0
+    --     then
+    --       if pi_tab_ig_prefix_proc_name is not null and instr(pi_tab_ig_prefix_proc_name,',') > 0
+    --         then
+    --           l_tab_ig_prefixes := APEX_UTIL.STRING_TO_TABLE(p_string => pi_tab_ig_prefix_proc_name, p_separator => ',');
+    --         else
+    --           l_tab_ig_prefixes(1) := pi_tab_ig_prefix_proc_name;
+    --       end if;
 
-          for i in 1..l_ig_regions.count
-          loop
-            if i <= l_tab_ig_prefixes.count  and l_tab_ig_prefixes(i) is not null --pi_tab_ig_prefix_proc_name is not null
-              then
-                l_tab_ig_prefix_proc_name := l_tab_ig_prefixes(i) || '_'; --pi_tab_ig_prefix_proc_name || '_';
-              else
-                l_tab_ig_prefix_proc_name := 'IG_' || (i) || '_';
-            end if;
+    --       for i in 1..l_ig_regions.count
+    --       loop
+    --         if i <= l_tab_ig_prefixes.count  and l_tab_ig_prefixes(i) is not null --pi_tab_ig_prefix_proc_name is not null
+    --           then
+    --             l_tab_ig_prefix_proc_name := l_tab_ig_prefixes(i) || '_'; --pi_tab_ig_prefix_proc_name || '_';
+    --           else
+    --             l_tab_ig_prefix_proc_name := 'IG_' || (i) || '_';
+    --         end if;
 
-            l_save :=  get_save_proc_for_apex_proc(pi_base_url                => pi_base_url,
-                                                   pi_login_yes_no            => pi_login_yes_no,
-                                                   pi_username                => pi_username,
-                                                   pi_password                => pi_password,
-                                                   pi_app_id                  => pi_app_id,
-                                                   pi_page_id                 => pi_page_id,
-                                                   pi_direct_yes_no           => pi_direct_yes_no,
-                                                   pi_modal_yes_no            => pi_modal_yes_no,
-                                                   pi_region_name             => l_ig_regions(i).region_name,
-                                                   pi_screenshot              => pi_screenshot,
-                                                   pi_pdf                     => pi_pdf,
-                                                   pi_viewport_height         => pi_viewport_height,
-                                                   pi_viewport_width          => pi_viewport_width,
-                                                   pi_delay                   => pi_delay,
-                                                   pi_is_tab_or_ig            => 1,
-                                                   pi_tab_ig_prefix_proc_name => l_tab_ig_prefix_proc_name);
+    --         -- l_save :=  get_save_proc_for_apex_proc(pi_base_url                => pi_base_url,
+    --         --                                        pi_login_yes_no            => pi_login_yes_no,
+    --         --                                        pi_username                => pi_username,
+    --         --                                        pi_password                => pi_password,
+    --         --                                        pi_app_id                  => pi_app_id,
+    --         --                                        pi_page_id                 => pi_page_id,
+    --         --                                        pi_direct_yes_no           => pi_direct_yes_no,
+    --         --                                        pi_modal_yes_no            => pi_modal_yes_no,
+    --         --                                        pi_region_name             => l_ig_regions(i).region_name,
+    --         --                                        pi_screenshot              => pi_screenshot,
+    --         --                                        pi_pdf                     => pi_pdf,
+    --         --                                        pi_viewport_height         => pi_viewport_height,
+    --         --                                        pi_viewport_width          => pi_viewport_width,
+    --         --                                        pi_delay                   => pi_delay,
+    --         --                                        pi_is_tab_or_ig            => 1,
+    --         --                                        pi_tab_ig_prefix_proc_name => l_tab_ig_prefix_proc_name);
 
-            l_ig_tab_call_process := pup_json_string.c_json_string;
-            l_ig_tab_call_process := pup_json_string.replace_ig_tab_save_call(pi_source_script => l_ig_tab_call_process, pi_save_script => l_save);
-            l_return := l_return || l_ig_tab_call_process;
+    --         l_ig_tab_call_process := pup_json_string.c_json_string;
+    --        -- l_ig_tab_call_process := pup_json_string.replace_ig_tab_save_call(pi_source_script => l_ig_tab_call_process, pi_save_script => l_save);
+    --         l_return := l_return || l_ig_tab_call_process;
 
-          end loop;
-      end if;
-    $end
+    --       end loop;
+    --   end if;
+    -- $end
 
     return l_return;
   end start_json;

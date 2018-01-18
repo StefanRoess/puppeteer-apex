@@ -7,6 +7,11 @@ prompt pup_constants.pks
 /
 prompt ==========
 
+prompt pup_merge.pks
+@ ./packages/pup_merge.pks
+/
+prompt ==========
+
 prompt pup_json_string.pks
 @ ./packages/pup_json_string.pks
 /
@@ -21,6 +26,10 @@ prompt ==========
 -- Package Bodies
 ------------------
 
+prompt pup_merge.pkb
+@ ./packages/pup_merge.pkb
+/
+prompt ==========
 
 prompt pup_json_string.pkb
 @ ./packages/pup_json_string.pkb

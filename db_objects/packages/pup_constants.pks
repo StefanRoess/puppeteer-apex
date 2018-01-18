@@ -16,4 +16,10 @@ as
   subtype t_huge_vc2    is varchar2(4000);
   subtype t_max_vc2     is varchar2(32767);
 
+
+  -- SUBTYPE char_small_t IS VARCHAR2 (100);
+  -- SUBTYPE char_medium_t IS VARCHAR2 (1000);
+  -- SUBTYPE char_big_t IS VARCHAR2 (4000);
+  -- SUBTYPE char_huge_t IS VARCHAR2 (32767);
+
 end pup_constants;

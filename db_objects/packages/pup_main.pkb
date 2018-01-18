@@ -534,74 +534,6 @@ as
   /* =================================================================================== */
   /* =================================================================================== */
   /* =================================================================================== */
-  function get_regions(
-      pi_app_id       in number,
-      pi_page_id      in number,
-      pi_region_name  in varchar2 default null
-  )
-    return t_regions
-  as
-    l_return t_regions;
-
-  begin
-    $IF pup_constants.c_apex_version_5_1 or pup_constants.c_apex_version_5_1_greater
-    $THEN
-
-        -- if pi_pk_column is not null and instr(pi_pk_column,':') > 0
-        --   then
-        --     l_tab_ig_pk_cols := APEX_UTIL.STRING_TO_TABLE(p_string => pi_pk_column, p_separator => ':');
-        --   else
-        --     l_tab_ig_pk_cols(1) := pi_pk_column;
-        -- end if;
-
-          -- if i <= l_tab_ig_pk_cols.count and l_tab_ig_pk_cols(i) is not null
-          --   then
-          --     l_pk_column := l_tab_ig_pk_cols(i);
-          --   else
-          --     l_pk_column := 'ROWID';    -- l_pk_column entspricht dann dem l_region_name
-          -- end if;
-
-        select aapr.region_name, aapr.source_type_code
-               bulk collect into l_return
-          from APEX_APPLICATION_PAGE_REGIONS aapr
-          where 1=1
-          and aapr.application_id = pi_app_id
-          and aapr.page_id        = pi_page_id
-          and aapr.region_name    = coalesce(pi_region_name,aapr.region_name)
-          order by aapr.display_sequence, aapr.region_name;
-    $END
-
-    return l_return;
-  end get_regions;
-
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  function get_ig_regions(pi_regions in t_regions)
-    return t_regions
-  as
-    l_extend_count  number    := 0;
-    l_return        t_regions := t_regions();
-
-  begin
-    for i in 1..pi_regions.count
-    loop
-      if pi_regions(i).source_type_code = 'NATIVE_IG'
-        then
-          l_return.extend;
-          l_extend_count := l_extend_count + 1;
-          l_return(l_extend_count) := pi_regions(i);
-      end if;
-    end loop;
-
-    return l_return;
-  end get_ig_regions;
-
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
   function get_apex_call_pio_parameter(pi_item          in t_item default null,
                                        pi_ig_item       in t_ig_item default null,
                                        pi_tabform_item  in t_tabform_item default null,
@@ -627,6 +559,7 @@ as
         else
           null;
         end case;
+
      when c_item_types then
         ------------------
         -- item_data_type
@@ -759,8 +692,74 @@ as
     return l_return;
   end get_apex_call_script;
 
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
+  ---------------------------------------------------------------------------------------
+  -- This function will be called by Apex, with Click at the Button Create JSON
+  -- a dynamic Action "get JSON Code" will be fired.
+  --
+  -- History:
+  --  16-Jan-2018 V1.0   Stefan Roess
+  ---------------------------------------------------------------------------------------
+  function start_json (
+      pi_base_url                in varchar2,
+      pi_login_yes_no            in number,
+      pi_username                in varchar2 default null,
+      pi_password                in varchar2 default null,
+      pi_app_id                  in number,
+      pi_page_id                 in number,
+      pi_direct_yes_no           in number,
+      pi_modal_yes_no            in number,
+      pi_region_name             in varchar2 default null,
+      pi_screenshot              in number,
+      pi_pdf                     in number,
+      pi_viewport_height         in number,
+      pi_viewport_width          in number,
+      pi_delay                   in number
+  )
+    return clob
+  as
+    l_regions         t_regions;
+    l_ig_regions      t_regions;
+    l_tabform_regions t_regions;
 
+    l_tab_ig_prefix_proc_name   varchar2(30);
+    l_tab_ig_prefixes           apex_application_global.vc_arr2;
+    l_tab_ig_pk_cols            apex_application_global.vc_arr2;
+    l_pk_column                 varchar2(30);
 
+    l_save                      clob;
+    l_update                    clob;
+    l_delete                    clob;
+    l_ig_tab_call_process       clob;
+
+    l_return                    clob;
+
+  begin
+    l_return := get_apex_call_script(pi_base_url                => pi_base_url,
+                                     pi_login_yes_no            => pi_login_yes_no,
+                                     pi_username                => pi_username,
+                                     pi_password                => pi_password,
+                                     pi_app_id                  => pi_app_id,
+                                     pi_page_id                 => pi_page_id,
+                                     pi_direct_yes_no           => pi_direct_yes_no,
+                                     pi_modal_yes_no            => pi_modal_yes_no,
+                                     pi_region_name             => pi_region_name,
+                                     pi_screenshot              => pi_screenshot,
+                                     pi_pdf                     => pi_pdf,
+                                     pi_viewport_height         => pi_viewport_height,
+                                     pi_viewport_width          => pi_viewport_width,
+                                     pi_delay                   => pi_delay,
+                                     pi_is_tab_or_ig            => 0,
+                                     pi_load_save_or_delete     => 'S');
+
+    return l_return;
+  end start_json;
+
+  /* =================================================================================== */
+  /* =================================================================================== */
+  /* =================================================================================== */
 
   /* ================================================================== */
   /* == call from dynamic action "on Change set P10_PAGE_ID" ========== */
@@ -814,81 +813,6 @@ as
     return l_return;
   end check_has_tab_ig_on_page;
 
-
-  /* =================================================================================== */
-  /* =================================================================================== */
-  /* =================================================================================== */
-  ---------------------------------------------------------------------------------------
-  -- This function will be called by Apex, with Click at the Button Create JSON
-  -- a dynamic Action "get JSON Code" will be fired.
-  --
-  -- History:
-  --  16-Jan-2018 V1.0   Stefan Roess
-  ---------------------------------------------------------------------------------------
-  function start_json (
-      pi_base_url                in varchar2,
-      pi_login_yes_no            in number,
-      pi_username                in varchar2 default null,
-      pi_password                in varchar2 default null,
-      pi_app_id                  in number,
-      pi_page_id                 in number,
-      pi_direct_yes_no           in number,
-      pi_modal_yes_no            in number,
-      pi_region_name             in varchar2 default null,
-      pi_screenshot              in number,
-      pi_pdf                     in number,
-      pi_viewport_height         in number,
-      pi_viewport_width          in number,
-      pi_delay                   in number,
-      pi_tab_ig_prefix_proc_name in varchar2 default null --for the future to set it from outside
-  )
-    return clob
-  as
-    l_regions         t_regions;
-    l_ig_regions      t_regions;
-    l_tabform_regions t_regions;
-
-    l_tab_ig_prefix_proc_name   varchar2(30);
-    l_tab_ig_prefixes           apex_application_global.vc_arr2;
-    l_tab_ig_pk_cols            apex_application_global.vc_arr2;
-    l_count_other_regions_as_ig number := 0;
-    l_pk_column                 varchar2(30);
-
-    l_save                      clob;
-    l_update                    clob;
-    l_delete                    clob;
-    l_ig_tab_call_process       clob;
-
-    l_return                    clob;
-
-  begin
-    -- Stefan Roess
-    l_count_other_regions_as_ig := 1;
-
-    if l_count_other_regions_as_ig > 0
-      then
-       -- l_return := get_save_proc_for_apex_proc(pi_base_url                => pi_base_url,
-               l_return := get_apex_call_script(pi_base_url                => pi_base_url,
-                                                pi_login_yes_no            => pi_login_yes_no,
-                                                pi_username                => pi_username,
-                                                pi_password                => pi_password,
-                                                pi_app_id                  => pi_app_id,
-                                                pi_page_id                 => pi_page_id,
-                                                pi_direct_yes_no           => pi_direct_yes_no,
-                                                pi_modal_yes_no            => pi_modal_yes_no,
-                                                pi_region_name             => pi_region_name,
-                                                pi_screenshot              => pi_screenshot,
-                                                pi_pdf                     => pi_pdf,
-                                                pi_viewport_height         => pi_viewport_height,
-                                                pi_viewport_width          => pi_viewport_width,
-                                                pi_delay                   => pi_delay,
-                                                pi_is_tab_or_ig            => 0,
-                                                pi_load_save_or_delete     => 'S');
-                                                --pi_tab_ig_prefix_proc_name => l_tab_ig_prefix_proc_name);
-    end if;
-
-    return l_return;
-  end start_json;
 
 ------------------
 -- end of program

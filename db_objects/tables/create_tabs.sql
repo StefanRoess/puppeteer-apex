@@ -10,6 +10,7 @@ create table item_values (
   , item_type       varchar2 (300 char) -- from forms_item or interactive grid column
   , item_static_id  varchar2 (300 char)
   , is_required     varchar2 (100 char)
+  , req_null_value  number(1)
   , region_id       number
   , region_name     varchar2 (300 char)
   , app_id          number

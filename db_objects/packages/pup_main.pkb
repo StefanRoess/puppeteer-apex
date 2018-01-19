@@ -473,6 +473,7 @@ as
             item_type,
             item_static_id,
             is_required,
+            req_null_value,
             region_id,
             region_name,
             app_id,
@@ -509,7 +510,6 @@ as
       -- items
       ----------
       when c_items then
-        logger.log(nvl(pi_item.item_name, 'IT NULL Value'));
         case
           when pi_item.item_name is not null then l_return := c_quot||pi_item.item_name||c_quot;
         else
@@ -520,7 +520,6 @@ as
       -- item_data_type
       ------------------
       when c_item_types then
-        logger.log(nvl(pi_item.item_data_type, 'DT NULL Value'));
         case
           when pi_item.item_data_type is not null then l_return := c_quot||pi_item.item_data_type||c_quot;
         else
@@ -531,7 +530,6 @@ as
       -- item_value
       --------------
       when c_item_values then
-        logger.log(nvl(pi_item.item_value, 'IV NULL Value'));
         case
           when pi_item.item_value is not null then l_return := c_quot||pi_item.item_value||c_quot;
         else
@@ -567,7 +565,7 @@ as
       when pi_items is not null and pi_items.count > 0 then
         for i in 1..pi_items.count
         loop
-          if pi_items(i).item_value is not null then
+          if pi_items(i).item_value is not null or pi_items(i).req_null_value = 1 then
             ----------------------------------------
             -- responsible for items and data_types
             ----------------------------------------

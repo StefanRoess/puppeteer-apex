@@ -1,3 +1,11 @@
+-----------------------------
+-- which application exists
+-----------------------------
+select application_id || ' ' || application_name,  application_id
+  from apex_applications
+  where application_id < 4000
+  order by application_id, application_name
+
 -------------
 -- all lists
 -------------
@@ -6,15 +14,17 @@ select list_name, list_id from APEX_APPLICATION_LISTS where application_id = :ap
 ----------------------------------
 -- all list entries and its pages
 ----------------------------------
-select lpad(' ', 2*level) || entry_text List, REGEXP_SUBSTR (a.entry_target, '[^:]+', 1, 2) Page
-  from apex_application_list_entries a
-  where 1=1
-  and a.application_id =:app_id
-  and   a.list_name = 'Application Navigation'
-  and (condition_type_code != 'NEVER' or condition_type_code is null)
-  start with a.list_entry_parent_id is null
-  connect by prior a.list_entry_id = a.list_entry_parent_id
-  order by display_sequence;
+select text d, LIST_ENTRY_ID r
+  from (
+          select '('||level||') - '||a.entry_text text, LIST_ENTRY_ID
+            from apex_application_list_entries a
+            where 1=1
+            and a.application_id = :P30_APP_ID
+            and a.list_id = :P30_APPLICATION_LIST
+            start with a.list_entry_parent_id is null
+            connect by prior a.list_entry_id = a.list_entry_parent_id
+            order by display_sequence
+  );
 
 -------------------------
 -- all application_pages

@@ -509,6 +509,7 @@ as
       -- items
       ----------
       when c_items then
+        logger.log(nvl(pi_item.item_name, 'IT NULL Value'));
         case
           when pi_item.item_name is not null then l_return := c_quot||pi_item.item_name||c_quot;
         else
@@ -519,6 +520,7 @@ as
       -- item_data_type
       ------------------
       when c_item_types then
+        logger.log(nvl(pi_item.item_data_type, 'DT NULL Value'));
         case
           when pi_item.item_data_type is not null then l_return := c_quot||pi_item.item_data_type||c_quot;
         else
@@ -529,6 +531,7 @@ as
       -- item_value
       --------------
       when c_item_values then
+        logger.log(nvl(pi_item.item_value, 'IV NULL Value'));
         case
           when pi_item.item_value is not null then l_return := c_quot||pi_item.item_value||c_quot;
         else
@@ -564,32 +567,28 @@ as
       when pi_items is not null and pi_items.count > 0 then
         for i in 1..pi_items.count
         loop
-          ----------------------------------------
-          -- responsible for items and data_types
-          ----------------------------------------
-          l_return := l_return || get_diff_types(pi_item            => pi_items(i)
-                                               , pi_item_type_value => pi_item_type_value);
-
-          ------------------------------------
-          -- set a comma but not for the last
-          ------------------------------------
-          if not (i = pi_items.count) then
+          if pi_items(i).item_value is not null then
+            ----------------------------------------
+            -- responsible for items and data_types
+            ----------------------------------------
+            l_return := l_return || get_diff_types(pi_item            => pi_items(i)
+                                                 , pi_item_type_value => pi_item_type_value);
+            ------------------------------------
+            -- set a comma but not for the last
+            ------------------------------------
             if pi_item_type_value = c_item_values then
-              l_return := l_return || ','|| c_cr||rpad(' ',22);
+              l_return := l_return || ','|| c_cr||rpad(' ', 22);
             else
-              l_return := l_return || ','|| c_cr||rpad(' ',16);
+              l_return := l_return || ','|| c_cr||rpad(' ', 16);
             end if;
-          else
-            null;
           end if;
         end loop;
-      else
-        null;
+        l_return := rtrim(l_return, ','|| c_cr||rpad(' ', 1));
     end case;
 
     return l_return;
   end get_apex_items;
-      
+
 
   /* =================================================================================== */
   /* =================================================================================== */

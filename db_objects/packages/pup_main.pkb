@@ -627,7 +627,9 @@ as
                              , pi_page_id => pi_page_id
                              , pi_base_url => pi_base_url);
 
+    --------------------------------------------
     -- hier sind im bulk viele Items enthalten.
+    --------------------------------------------
     l_items := handle_json(pi_app_id       => pi_app_id
                           ,pi_page_id      => pi_page_id
                           ,pi_region_name  => pi_region_name);

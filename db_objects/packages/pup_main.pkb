@@ -280,7 +280,7 @@ as
                                  , pi_page_id     in number
                                  , pi_region_name in varchar2)
   as
-    l_item_type varchar2(20) := 'IG-Column-Item';
+    l_item_type varchar2(20) := 'IG-Col-Item';
 
   begin
     merge into item_values dest

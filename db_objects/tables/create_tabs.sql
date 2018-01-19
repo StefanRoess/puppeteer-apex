@@ -1,5 +1,5 @@
-drop table item_values;
-
+prompt
+prompt create table item_values;
 create table item_values (
     id              number generated always as identity
   , item_id         number

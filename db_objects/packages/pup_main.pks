@@ -115,14 +115,14 @@ as
   function get_edit_items(
     pi_app_id      in number,
     pi_page_id     in number,
-    pi_region_name in varchar2
+    pi_region_name in varchar2 default null
   )
     return t_edit_items pipelined;
 
   function get_edit_ig_items(
     pi_app_id      in number,
     pi_page_id     in number,
-    pi_region_name in varchar2
+    pi_region_name in varchar2 default null
   )
     return t_edit_ig_items pipelined;
 

@@ -19,7 +19,7 @@ as
   function get_edit_items(
     pi_app_id      in number,
     pi_page_id     in number,
-    pi_region_name in varchar2
+    pi_region_name in varchar2 default null
   )
     return t_edit_items pipelined
   as
@@ -49,7 +49,7 @@ as
                 and pr.application_id = pi_app_id
                 and pi.page_id        = pr.page_id
                 and pi.page_id        = pi_page_id
-                and pr.region_name    = pi_region_name
+                and pr.region_name    = coalesce(pi_region_name, pr.region_name)
               minus
               select  pi.item_id,
                       pi.item_name,
@@ -70,7 +70,7 @@ as
                 and pr.application_id = pi_app_id
                 and pi.page_id        = pr.page_id
                 and pi.page_id        = pi_page_id
-                and pr.region_name    = pi_region_name
+                and pr.region_name    = coalesce(pi_region_name, pr.region_name)
                 and ( pi.display_as_code in ('NATIVE_DISPLAY_ONLY','NATIVE_HIDDEN')
                   or lower(pi.html_form_element_attributes) like '%readonly%'
                   or pi.read_only_condition_type_code = 'ALWAYS'
@@ -110,7 +110,7 @@ as
   function get_edit_ig_items(
     pi_app_id      in number,
     pi_page_id     in number,
-    pi_region_name in varchar2
+    pi_region_name in varchar2 default null
   )
     return t_edit_ig_items pipelined
   as
@@ -139,7 +139,7 @@ as
                 where 1=1
                 and ic.application_id = pi_app_id
                 and ic.page_id        = pi_page_id
-                and ic.region_name    = pi_region_name
+                and ic.region_name    = coalesce(pi_region_name, ic.region_name)
               minus
               select  ic.column_id,
                      ic.name,
@@ -153,7 +153,7 @@ as
                 where 1=1
                 and ic.application_id = pi_app_id
                 and ic.page_id        = pi_page_id
-                and ic.region_name    = pi_region_name
+                and ic.region_name    = coalesce(pi_region_name, ic.region_name)
                 and ic.item_type in ('NATIVE_HIDDEN', 'NATIVE_DISPLAY_ONLY', 'NATIVE_ROW_ACTION', 'NATIVE_ROW_SELECTOR')
               )
     )

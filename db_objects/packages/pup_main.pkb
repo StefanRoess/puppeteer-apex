@@ -154,7 +154,8 @@ as
                 and ic.application_id = pi_app_id
                 and ic.page_id        = pi_page_id
                 and ic.region_name    = coalesce(pi_region_name, ic.region_name)
-                and ic.item_type in ('NATIVE_HIDDEN', 'NATIVE_DISPLAY_ONLY', 'NATIVE_ROW_ACTION', 'NATIVE_ROW_SELECTOR')
+                and (ic.item_type in ('NATIVE_HIDDEN', 'NATIVE_DISPLAY_ONLY', 'NATIVE_ROW_ACTION', 'NATIVE_ROW_SELECTOR')
+                 or read_only_condition_type_code = 'ALWAYS')
               )
     )
     loop

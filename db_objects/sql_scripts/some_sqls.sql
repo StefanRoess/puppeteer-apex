@@ -57,3 +57,54 @@ select item_name, region_name
      from table(
              pup_main.get_edit_items(:app_id, :app_page_id)
            );
+
+-------------------------
+-- occurencies of 'f?p='
+-------------------------
+select regexp_count(region_source,'f?p='), a.region_source
+  from apex_application_page_regions a
+  where 1=1
+  and application_id =:app_id
+  and regexp_count(region_source,'f?p=') > 0;
+
+
+select regexp_count(region_source,'f?p=')
+     , regexp_substr(replace(lower(a.region_source), ':app_id', '#'), '[^:]+', 1, 2) page_ids
+     , regexp_substr(replace(lower(a.region_source), ':app_id', '#'), '[^f?p=]+', 1, 2) p
+     , a.region_source
+     , replace(a.region_source, ':app_id', '#')
+  from apex_application_page_regions a
+  where 1=1
+  and application_id =:app_id
+  and regexp_count(region_source,'f?p=') > 0;
+
+
+select  region_source
+       ,regexp_substr (region_source, '[^f?p=]+', 1, 1)    as part_1
+       ,regexp_substr (region_source, '[^f?p=]+', 1, 2)    as part_2
+       ,regexp_substr (region_source, '[^f?p=]+', 1, 3)    as part_3
+       ,regexp_substr (region_source, '[^f?p=]+', 1, 4)    as part_4
+  from apex_application_page_regions a
+  where 1=1
+  and application_id =:app_id
+  and regexp_count(region_source,'f?p=') > 0;
+
+select regexp_count(region_source,'f?p=')
+     , substr(regexp_substr(a.region_source, '[f\?p=]+*:[[:digit:]]+',1,1),2) digit
+     , substr(regexp_substr(a.region_source, '[f\?p=]+*:[[:digit:]]+',1,2),2) digit
+     , substr(regexp_substr(a.region_source, '[f\?p=]+*:[[:digit:]]+',1,3),2) digit
+     , substr(regexp_substr(a.region_source, '[f\?p=]+*:[[:digit:]]+',1,4),2) digit
+     , substr(regexp_substr(a.region_source, '[f\?p=]+*',1,1),2) digit
+     , substr(regexp_substr(a.region_source, '[f\?p=]+*',1,2),2) digit
+     , substr(regexp_substr(a.region_source, '[f\?p=]+*',1,3),2) digit
+     , substr(regexp_substr(a.region_source, '[f\?p=]+*',1,4),2) digit
+     --, substr(regexp_substr(a.region_source, ':[[:digit:]]+',1,2),2) digit2
+     --, substr(regexp_substr(a.region_source, ':[[:digit:]]+',1,3),2) digit3
+     --, substr(regexp_substr(a.region_source, ':[[:digit:]]+',1,4),2) digit4
+     , region_source
+  from apex_application_page_regions a
+  where 1=1
+  and application_id =:app_id
+  and regexp_count(region_source,'f?p=') > 0;
+
+---

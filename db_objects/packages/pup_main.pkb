@@ -643,8 +643,12 @@ as
 
     l_apex_item_values := get_apex_items(pi_items           => l_items
                                        , pi_item_type_value  => c_item_values);
-
+    
+    ------------------------------------------------------
+    -- pull the json model pup_json_string.c_json_string
+    ------------------------------------------------------
     l_return := pup_json_string.replace_base_url(pi_source_script => pup_json_string.c_json_string , pi_base_url => l_base_url);
+    
     l_return := pup_json_string.replace_login_yes_no(pi_source_script => l_return, pi_login_yes_no => pi_login_yes_no);
     l_return := pup_json_string.replace_username(pi_source_script => l_return, pi_username => pi_username);
     l_return := pup_json_string.replace_password(pi_source_script => l_return, pi_password => pi_password);

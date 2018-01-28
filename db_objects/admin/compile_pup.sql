@@ -17,10 +17,17 @@ prompt pup_json_string.pks
 /
 prompt ==========
 
+prompt pup_dyn_regions.pks
+@ ../packages/pup_dyn_regions.pks
+/
+prompt ==========
+
 prompt pup_main.pks
 @ ../packages/pup_main.pks
 /
 prompt ==========
+
+
 
 ------------------
 -- Package Bodies
@@ -33,6 +40,11 @@ prompt ==========
 
 prompt pup_json_string.pkb
 @ ../packages/pup_json_string.pkb
+/
+prompt ==========
+
+prompt pup_dyn_regions.pkb
+@ ../packages/pup_dyn_regions.pkb
 /
 prompt ==========
 

@@ -30,6 +30,15 @@ as
   --            You must set the column: runtime_api_usage in table: wwv_flows to 'W'
   --            then you have access to wwv_flow_api.create_menu_option
   --
+  --            if there is an error like this:
+  --                An API call has been prohibited. Contact your administrator.
+  --                Details about this incident are available via debug id "4153".
+  --            then:
+  --                select *
+  --                  from apex_debug_messages
+  --                  where page_view_id = NN
+  --                  order by message_timestamp asc;
+  --
   -- History:
   --  28-Aug-2015 V1.0   Stefan Roess
   --------------------------------------------------------------------------------------------
@@ -101,8 +110,11 @@ as
       --       lv_source_id := 0;
       -- END;
 
+      -- logger.log('l_parent_region_id:'||l_parent_region_id);
+      -- logger.log('l_display_sequence:'||l_display_sequence);
+      -- logger.log('l_template_id:'||l_template_id);
 
-        wwv_flow_api.create_page_plug(
+      wwv_flow_api.create_page_plug(
            p_flow_id                       => p_app_id
           ,p_page_id                       => p_page_id
           ,p_plug_name                     => l_region_name
@@ -117,6 +129,10 @@ as
           ,p_attribute_01                  => 'N'
           ,p_attribute_02                  => 'HTML'
         );
+  exception
+    when others then
+      -- logger.log(DBMS_UTILITY.format_error_backtrace);
+      null;
 
   end create_region;
 /* =================================================================================== */
